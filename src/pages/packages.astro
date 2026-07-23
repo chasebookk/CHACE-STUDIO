@@ -1,0 +1,364 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import PricingCard from '../components/PricingCard.astro';
+
+const filters = [
+  { label: 'All', value: 'all' },
+  { label: 'Photography', value: 'photography' },
+  { label: 'Video Production', value: 'video' },
+  { label: 'Podcast Studio', value: 'podcast' },
+  { label: 'Studio Hire', value: 'studio-hire' },
+];
+
+const packages = [
+  {
+    category: 'Photography',
+    filter: 'photography',
+    title: 'Portrait Session',
+    price: '£250',
+    unit: '2hr',
+    description: 'Cinematic individual or group portraits shot low-key with professional grading.',
+    features: ['2-hour studio session', '30+ edited images', 'Cinematic colour grade', 'Online gallery'],
+    popular: false,
+  },
+  {
+    category: 'Photography',
+    filter: 'photography',
+    title: 'Full Wedding Coverage',
+    price: '£1500',
+    unit: '10hr',
+    description: 'Start-to-finish wedding documentation — getting ready through first dance.',
+    features: ['Full-day coverage', '500+ edited images', 'Highlight film included', 'Print rights'],
+    popular: true,
+  },
+  {
+    category: 'Video Production',
+    filter: 'video',
+    title: 'Brand Story Film',
+    price: '£2000',
+    unit: '8hr',
+    description: 'A 2–3 minute cinematic brand film from concept to final cut.',
+    features: ['Concept & storyboard', 'Cinema-grade capture', 'Full post & colour grade', 'Sound design'],
+    popular: true,
+  },
+  {
+    category: 'Video Production',
+    filter: 'video',
+    title: 'Event Highlight Reel',
+    price: '£800',
+    unit: '6hr',
+    description: 'Cinematic event coverage with a punchy highlight edit.',
+    features: ['Multi-angle capture', '1-min highlight edit', 'Full raw footage', '48hr turnaround'],
+    popular: false,
+  },
+  {
+    category: 'Podcast Studio',
+    filter: 'podcast',
+    title: 'Podcast Launch Package',
+    price: '£350',
+    unit: '3hr',
+    description: 'Full podcast episode production — recording, mixing & video capture.',
+    features: ['Studio + engineer', 'Multi-cam video', 'Multi-track mixing', 'Episode publish-ready'],
+    popular: false,
+  },
+  {
+    category: 'Studio Hire',
+    filter: 'studio-hire',
+    title: 'Studio Half-Day',
+    price: '£160',
+    unit: '4hr',
+    description: 'Four hours of full studio access with lighting grid.',
+    features: ['Main studio access', 'Lighting grid included', 'Cyclorama wall', 'Basic grip kit'],
+    popular: false,
+  },
+];
+---
+
+<Base title="Packages & Booking — CHACE STUDIOS" description="Transparent packages across photography, video, podcast and studio hire. No account needed — book in minutes.">
+  <Header />
+
+  <main>
+    <!-- Hero -->
+    <section class="pk-hero">
+      <p class="eyebrow">— 04 / Packages &amp; Booking</p>
+      <h1 class="display pk-hero__title">
+        Pick your<br />
+        <span class="grad-text">frame.</span>
+      </h1>
+      <p class="pk-hero__sub">
+        Transparent packages across photography, video, podcast and studio hire. No
+        account needed — book in minutes.
+      </p>
+    </section>
+
+    <!-- Filters -->
+    <section class="pk-filters">
+      <div class="pk-filters__row" role="tablist">
+        {filters.map((f, i) => (
+          <button
+            type="button"
+            class:list={['pk-filter', { 'pk-filter--active': i === 0 }]}
+            data-filter={f.value}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+    </section>
+
+    <!-- Pricing grid -->
+    <section class="pk-grid">
+      {packages.map((p) => <PricingCard {...p} />)}
+    </section>
+
+    <!-- Booking form -->
+    <section id="book" class="pk-book section">
+      <div class="pk-book__inner">
+        <p class="eyebrow">— Booking Request</p>
+        <h2 class="display pk-book__title">Book a Shoot</h2>
+        <p class="pk-book__sub">
+          Select a package above or fill the form below — we'll match you to the right service.
+        </p>
+
+        <form class="pk-form" novalidate>
+          <div class="pk-field">
+            <label class="pk-label" for="name">Full Name <span>*</span></label>
+            <input class="pk-input" id="name" name="name" type="text" placeholder="Jane Doe" required />
+          </div>
+
+          <div class="pk-field">
+            <label class="pk-label" for="email">Email <span>*</span></label>
+            <input class="pk-input" id="email" name="email" type="email" placeholder="jane@email.com" required />
+          </div>
+
+          <div class="pk-field">
+            <label class="pk-label" for="phone">Phone</label>
+            <input class="pk-input" id="phone" name="phone" type="tel" placeholder="07xxx xxxxxx" />
+          </div>
+
+          <div class="pk-field">
+            <label class="pk-label" for="date">Date <span>*</span></label>
+            <input class="pk-input pk-input--date" id="date" name="date" type="date" required />
+          </div>
+
+          <div class="pk-field pk-field--full">
+            <label class="pk-label" for="package">Select Package <span>*</span></label>
+            <select class="pk-input pk-select" id="package" name="package" required>
+              <option value="" disabled selected>Choose a package…</option>
+              {packages.map((p) => (
+                <option value={p.title}>{p.title} — {p.price}</option>
+              ))}
+            </select>
+          </div>
+
+          <div class="pk-field pk-field--full">
+            <label class="pk-label" for="details">Project Details</label>
+            <textarea class="pk-input pk-textarea" id="details" name="details" placeholder="Tell us about your shoot, vision, references…"></textarea>
+          </div>
+
+          <button type="submit" class="pk-submit">Continue to Payment</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  /* ---- Hero ---- */
+  .pk-hero {
+    padding: 160px var(--pad) 48px;
+  }
+  .pk-hero .eyebrow {
+    margin: 0 0 40px;
+  }
+  .pk-hero__title {
+    font-size: 96px;
+    line-height: 96px;
+    letter-spacing: -4.8px;
+    margin: 0 0 32px;
+  }
+  .pk-hero__sub {
+    font-size: 18px;
+    line-height: 29.25px;
+    color: var(--text-60);
+    max-width: 712px;
+    margin: 0;
+  }
+
+  /* ---- Filters ---- */
+  .pk-filters {
+    padding: 0 var(--pad);
+    margin-bottom: 40px;
+  }
+  .pk-filters__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pk-filter {
+    height: 38px;
+    padding: 0 20px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--text-50);
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .pk-filter:hover {
+    color: var(--white);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  .pk-filter--active {
+    background: var(--grad-btn);
+    border-color: transparent;
+    color: var(--white);
+  }
+
+  /* ---- Pricing grid ---- */
+  .pk-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 12px var(--pad) 0;
+  }
+  .pk-grid :global(.pcard.is-hidden) {
+    display: none !important;
+  }
+
+  /* ---- Booking form ---- */
+  .pk-book {
+    margin-top: 96px;
+    padding-top: 88px;
+    padding-bottom: 88px;
+  }
+  .pk-book__inner {
+    max-width: 678px;
+    margin: 0 auto;
+  }
+  .pk-book .eyebrow {
+    margin: 0 0 32px;
+  }
+  .pk-book__title {
+    font-size: 48px;
+    line-height: 48px;
+    letter-spacing: -2.4px;
+    margin: 0 0 16px;
+  }
+  .pk-book__sub {
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--text-50);
+    margin: 0 0 40px;
+  }
+
+  .pk-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 14px;
+  }
+  .pk-field {
+    display: flex;
+    flex-direction: column;
+  }
+  .pk-field--full {
+    grid-column: 1 / -1;
+  }
+
+  .pk-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .pk-label span {
+    color: var(--red);
+  }
+
+  .pk-input {
+    height: 52.5px;
+    padding: 0 16px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s ease;
+  }
+  .pk-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+  }
+  .pk-input:focus {
+    border-color: var(--red);
+  }
+
+  .pk-input--date {
+    color-scheme: dark;
+  }
+
+  .pk-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23a0a0a0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 20px center;
+    padding-right: 44px;
+  }
+  .pk-select option {
+    background: #0a0a0a;
+    color: var(--white);
+  }
+
+  .pk-textarea {
+    height: 120px;
+    padding: 16px;
+    resize: vertical;
+    line-height: 22.5px;
+    font-family: var(--font-body);
+  }
+
+  .pk-submit {
+    grid-column: 1 / -1;
+    height: 48px;
+    margin-top: 20px;
+    background: var(--grad-btn);
+    border: 0;
+    color: var(--white);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.25s ease;
+  }
+  .pk-submit:hover {
+    opacity: 0.9;
+  }
+</style>
+
+<script>
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.pk-filter');
+  const cards = document.querySelectorAll<HTMLElement>('.pk-grid .pcard');
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const filter = btn.dataset.filter;
+      buttons.forEach((b) => b.classList.toggle('pk-filter--active', b === btn));
+      cards.forEach((card) => {
+        const show = filter === 'all' || card.dataset.category === filter;
+        card.classList.toggle('is-hidden', !show);
+      });
+    });
+  });
+</script>

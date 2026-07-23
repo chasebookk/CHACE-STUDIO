@@ -1,0 +1,171 @@
+---
+interface Props {
+  category: string;
+  filter: string;
+  title: string;
+  price: string;
+  unit: string;
+  description: string;
+  features: string[];
+  popular?: boolean;
+}
+
+const { category, filter, title, price, unit, description, features, popular = false } = Astro.props;
+---
+
+<article class:list={['pcard', { 'pcard--popular': popular }]} data-category={filter}>
+  {popular && (
+    <span class="pcard__badge">
+      <img src="/assets/icons/star.svg" alt="" width="10" height="10" />
+      Popular
+    </span>
+  )}
+
+  <p class="pcard__category">{category}</p>
+  <h3 class="display pcard__title">{title}</h3>
+
+  <p class="pcard__price">
+    <span class="pcard__amount">{price}</span>
+    <span class="pcard__unit">/ {unit}</span>
+  </p>
+
+  <p class="pcard__desc">{description}</p>
+
+  <ul class="pcard__list">
+    {features.map((f) => (
+      <li class="pcard__item">
+        <img class="pcard__check" src="/assets/icons/check.svg" alt="" width="14" height="14" />
+        <span>{f}</span>
+      </li>
+    ))}
+  </ul>
+
+  <a href="#book" class="pcard__btn">Book This</a>
+</article>
+
+<style>
+  .pcard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 443.5px;
+    padding: 28px 28px 30px;
+    background: #020202;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: border-color 0.25s ease, transform 0.25s ease;
+  }
+  .pcard:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: translateY(-4px);
+  }
+
+  .pcard--popular {
+    background: #0a0202;
+    border-color: var(--red);
+  }
+  .pcard--popular:hover {
+    border-color: var(--red);
+  }
+
+  .pcard__badge {
+    position: absolute;
+    top: -12px;
+    left: 28px;
+    height: 23px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px;
+    background: var(--grad-btn);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--white);
+  }
+
+  .pcard__category {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin: 0;
+  }
+
+  .pcard__title {
+    font-size: 24px;
+    line-height: 32px;
+    letter-spacing: -1.2px;
+    margin: 16px 0 0;
+  }
+
+  .pcard__price {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 18px 0 0;
+  }
+  .pcard__amount {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 36px;
+    line-height: 40px;
+    color: var(--white);
+  }
+  .pcard__unit {
+    font-size: 14px;
+    line-height: 20px;
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .pcard__desc {
+    font-size: 14px;
+    line-height: 22.75px;
+    color: var(--text-50);
+    margin: 16px 0 0;
+  }
+
+  .pcard__list {
+    list-style: none;
+    margin: 24px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .pcard__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--text-70);
+  }
+  .pcard__check {
+    flex: none;
+  }
+
+  .pcard__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    flex: none;
+    margin-top: auto;
+    border: 1px solid var(--line-strong);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--white);
+    transition: background 0.25s ease, border-color 0.25s ease;
+  }
+  .pcard__btn:hover {
+    background: var(--white);
+    color: #000;
+    border-color: var(--white);
+  }
+</style>

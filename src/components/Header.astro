@@ -1,0 +1,74 @@
+---
+---
+
+<header class="header">
+  <a href="/" class="header__logo">CHACE</a>
+
+  <nav class="header__nav">
+    <a href="/packages" class="header__book">Book</a>
+
+    <button type="button" class="header__menu" aria-label="Toggle menu">
+      <span class="header__menu-label">Menu</span>
+      <img src="/assets/icons/menu1.svg" alt="" width="22" height="22" />
+    </button>
+  </nav>
+</header>
+
+<style>
+  .header {
+    position: absolute;
+    inset: 0 0 auto 0;
+    z-index: 50;
+    height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--pad);
+  }
+
+  .header__logo {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 30px;
+    letter-spacing: -1.5px;
+    text-transform: uppercase;
+    color: var(--white);
+  }
+
+  .header__nav {
+    display: flex;
+    align-items: center;
+    gap: 44px;
+  }
+
+  .header__book {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 2.75px;
+    text-transform: uppercase;
+    color: var(--text-70);
+    transition: color 0.2s ease;
+  }
+  .header__book:hover {
+    color: var(--white);
+  }
+
+  .header__menu {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .header__menu-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+</style>

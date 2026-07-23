@@ -1,0 +1,87 @@
+---
+---
+
+<footer class="footer">
+  <div class="footer__divider"></div>
+
+  <div class="footer__left">
+    <span class="footer__brand">CHACE STUDIOS</span>
+    <span class="footer__sep">|</span>
+    <span class="footer__location">LEICESTER, UK</span>
+  </div>
+
+  <div class="footer__right">
+    <a href="#" class="footer__link">CONTACT</a>
+    <a href="#" class="footer__link">INSTAGRAM ↗</a>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    position: relative;
+    height: 90px;
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--pad);
+  }
+
+  .footer__divider {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      rgba(255, 25, 9, 0) 0%,
+      var(--red) 50%,
+      rgba(255, 25, 9, 0) 100%
+    );
+  }
+
+  .footer__left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .footer__brand {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 2.4px;
+    color: var(--white);
+  }
+
+  .footer__sep {
+    font-size: 16px;
+    color: var(--line-strong);
+  }
+
+  .footer__location {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 2.4px;
+    color: var(--text-60);
+  }
+
+  .footer__right {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+  }
+
+  .footer__link {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 2.4px;
+    color: var(--text-60);
+    transition: color 0.2s ease;
+  }
+  .footer__link:hover {
+    color: var(--white);
+  }
+</style>
