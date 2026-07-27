@@ -1,5 +1,12 @@
 import type { APIRoute } from 'astro';
-import { getPackage, getTier, chargeNowPence, HOLD_MINUTES } from '../../config/booking';
+import {
+  getPackage,
+  getTier,
+  chargeNowPence,
+  getStudio,
+  DEFAULT_STUDIO,
+  HOLD_MINUTES,
+} from '../../config/booking';
 import { getPool } from '../../lib/db';
 import { getStripe } from '../../lib/stripe';
 import { toMin, toHHMM, slotIsFree, generateRef } from '../../lib/availability';
@@ -21,7 +28,19 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { package: slug, tier: tierId, date, time, name, email, phone, locationType, address, notes } = body ?? {};
+  const {
+    package: slug,
+    tier: tierId,
+    date,
+    time,
+    name,
+    email,
+    phone,
+    locationType,
+    studioId,
+    address,
+    notes,
+  } = body ?? {};
 
   const pkg = getPackage(String(slug ?? ''));
   const tier = pkg && getTier(pkg.slug, String(tierId ?? ''));
@@ -32,7 +51,12 @@ export const POST: APIRoute = async ({ request }) => {
   if (!name || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
     return json({ error: 'Name and a valid email are required' }, 400);
   }
-  const locType = locationType === 'on_location' ? 'on_location' : 'studio';
+  // Studio-only packages can never be on location, whatever the client sends.
+  const locType = !pkg.studioOnly && locationType === 'on_location' ? 'on_location' : 'studio';
+  const studio = locType === 'studio' ? (getStudio(studioId) ?? DEFAULT_STUDIO) : undefined;
+  if (locType === 'on_location' && !String(address ?? '').trim()) {
+    return json({ error: 'Please give the address for an on-location shoot.' }, 400);
+  }
 
   const startMin = toMin(String(time));
   const endMin = startMin + tier.durationMin;
@@ -59,10 +83,10 @@ export const POST: APIRoute = async ({ request }) => {
     const inserted = await client.query(
       `INSERT INTO bookings
          (ref, package_slug, tier_label, total_pence, paid_pence, balance_pence,
-          name, email, phone, location_type, address, notes,
+          name, email, phone, location_type, studio_id, address, notes,
           date, start_time, end_time, status, expires_at)
-       VALUES ($1,$2,$3,$4,0,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'pending_payment',
-               now() + ($15 || ' minutes')::interval)
+       VALUES ($1,$2,$3,$4,0,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'pending_payment',
+               now() + ($16 || ' minutes')::interval)
        RETURNING id`,
       [
         ref,
@@ -74,7 +98,9 @@ export const POST: APIRoute = async ({ request }) => {
         String(email).slice(0, 200),
         phone ? String(phone).slice(0, 50) : null,
         locType,
-        address ? String(address).slice(0, 500) : null,
+        studio?.id ?? null,
+        // A studio shoot's address is the studio's — never a stale free-text one.
+        locType === 'on_location' && address ? String(address).slice(0, 500) : null,
         notes ? String(notes).slice(0, 2000) : null,
         date,
         toHHMM(startMin),

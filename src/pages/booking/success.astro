@@ -4,7 +4,8 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { query, type BookingRow } from '../../lib/db';
 import { getStripe } from '../../lib/stripe';
-import { ADDRESS, MAPS_URL } from '../../data/portfolio';
+import { MAPS_URL } from '../../data/portfolio';
+import { getStudio } from '../../config/booking';
 
 export const prerender = false;
 
@@ -33,6 +34,11 @@ if (!sessionId) {
 }
 
 const fmt = (p: number) => `£${(p / 100).toFixed(2)}`;
+const studio = getStudio(booking?.studio_id) ?? {
+  id: 'pocklingtons',
+  name: 'CHACE STUDIOS',
+  address: '5 Pocklingtons Walk, Leicester LE1 6BT, UK',
+};
 const dateNice = booking
   ? new Date(`${String(booking.date).slice(0, 10)}T12:00:00`).toLocaleDateString('en-GB', {
       weekday: 'long',
@@ -73,7 +79,14 @@ const isBalancePayment = booking && paidPence > 0 && booking.status === 'deposit
             {booking!.status === 'deposit_paid' && booking!.balance_pence > 0 && (
               <li><strong>Balance due on/after session:</strong> {fmt(booking!.balance_pence)} — we'll send a payment link</li>
             )}
-            <li><strong>Where:</strong> <a href={MAPS_URL} target="_blank" rel="noopener">{ADDRESS}</a></li>
+            {booking!.location_type === 'on_location' ? (
+              <li><strong>Where:</strong> On location — {booking!.address}</li>
+            ) : (
+              <li>
+                <strong>Where:</strong> {studio.name} —
+                <a href={MAPS_URL} target="_blank" rel="noopener"> {studio.address}</a>
+              </li>
+            )}
           </ul>
         </div>
 

@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { query, type BookingRow } from '../lib/db';
 import { checkAdminAuth, unauthorized } from '../lib/auth';
+import { getPackage, getStudio } from '../config/booking';
 
 export const prerender = false;
 
@@ -34,6 +35,45 @@ const statusLabel: Record<string, string> = {
   paid_in_full: '✅ paid in full',
   cancelled: '✕ cancelled',
 };
+
+const where = (b: BookingRow) =>
+  b.location_type === 'on_location'
+    ? `On location — ${b.address || 'TBC'}`
+    : (getStudio(b.studio_id)?.name ?? 'CHACE STUDIOS');
+
+const pkgTitle = (b: BookingRow) => getPackage(b.package_slug)?.title ?? b.package_slug;
+
+// Agenda: confirmed, still-upcoming bookings grouped by day.
+const todayIso = new Date().toISOString().slice(0, 10);
+const agendaDays = [
+  ...bookings
+    .filter((b) => ['deposit_paid', 'paid_in_full'].includes(b.status) && d(b.date) >= todayIso)
+    .reduce((map, b) => {
+      const key = d(b.date);
+      (map.get(key) ?? map.set(key, []).get(key)!).push(b);
+      return map;
+    }, new Map<string, BookingRow[]>())
+    .entries(),
+].sort(([a], [b]) => a.localeCompare(b));
+
+const dayName = (iso: string) => {
+  const date = new Date(`${iso}T12:00:00`);
+  const label = date.toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  const days = Math.round((date.getTime() - new Date(`${todayIso}T12:00:00`).getTime()) / 86400000);
+  if (days === 0) return `${label} · today`;
+  if (days === 1) return `${label} · tomorrow`;
+  return `${label} · in ${days} days`;
+};
+
+const mins = (b: BookingRow) => {
+  const [sh, sm] = t(b.start_time).split(':').map(Number);
+  const [eh, em] = t(b.end_time).split(':').map(Number);
+  return eh * 60 + em - (sh * 60 + sm);
+};
 ---
 
 <Base title="Admin | CHACE STUDIOS" description="Admin">
@@ -41,7 +81,38 @@ const statusLabel: Record<string, string> = {
     <h1 class="display ad__title">Bookings admin</h1>
 
     <section class="ad__section">
-      <h2 class="display ad__h2">Upcoming bookings</h2>
+      <h2 class="display ad__h2">Schedule</h2>
+      {agendaDays.length === 0 ? (
+        <p class="ad__empty">Nothing confirmed coming up.</p>
+      ) : (
+        <div class="ad__agenda">
+          {agendaDays.map(([iso, items]) => (
+            <div class="ad__day">
+              <div class="ad__day-head">
+                <span class="ad__day-name">{dayName(iso)}</span>
+                <span class="ad__day-count">{items.length} {items.length === 1 ? 'shoot' : 'shoots'}</span>
+              </div>
+              {items.map((b) => (
+                <div class="ad__slot">
+                  <span class="ad__slot-time">{t(b.start_time)}–{t(b.end_time)}</span>
+                  <span class="ad__slot-body">
+                    <strong>{pkgTitle(b)}</strong> · {b.tier_label}<br />
+                    <span class="ad__sub">
+                      {b.name} · {mins(b)} min · {where(b)}
+                      {b.balance_pence > 0 && <span class="ad__due"> · {fmt(b.balance_pence)} due</span>}
+                    </span>
+                  </span>
+                  <span class="ad__mono ad__slot-ref">{b.ref}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+
+    <section class="ad__section">
+      <h2 class="display ad__h2">All bookings</h2>
       {bookings.length === 0 ? (
         <p class="ad__empty">No bookings yet.</p>
       ) : (
@@ -49,7 +120,7 @@ const statusLabel: Record<string, string> = {
           <table class="ad__table">
             <thead>
               <tr>
-                <th>Ref</th><th>Name</th><th>Package</th><th>Date / time</th>
+                <th>Ref</th><th>Name</th><th>Package</th><th>Date / time</th><th>Where</th>
                 <th>Paid</th><th>Balance</th><th>Status</th><th>Actions</th>
               </tr>
             </thead>
@@ -62,10 +133,11 @@ const statusLabel: Record<string, string> = {
                     <span class="ad__sub">{b.email}{b.phone ? ` · ${b.phone}` : ''}</span>
                   </td>
                   <td>
-                    {b.package_slug}<br />
+                    {pkgTitle(b)}<br />
                     <span class="ad__sub">{b.tier_label}{b.promo_code ? ` · promo ${b.promo_code}` : ''}</span>
                   </td>
                   <td class="ad__mono">{d(b.date)} {t(b.start_time)}–{t(b.end_time)}</td>
+                  <td><span class="ad__sub">{where(b)}</span></td>
                   <td class="ad__mono">{fmt(b.paid_pence)}</td>
                   <td class="ad__mono">{fmt(b.balance_pence)}</td>
                   <td>
@@ -238,6 +310,76 @@ const statusLabel: Record<string, string> = {
     .ad__btn--copy {
       border-color: var(--orange);
     }
+    /* ---- Agenda ---- */
+    .ad__agenda {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+    .ad__day {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .ad__day-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid var(--line);
+    }
+    .ad__day-name {
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+    .ad__day-count {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .ad__slot {
+      display: grid;
+      grid-template-columns: 118px 1fr auto;
+      gap: 14px;
+      align-items: start;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--line);
+      font-size: 13.5px;
+    }
+    .ad__slot:last-child {
+      border-bottom: 0;
+    }
+    .ad__slot-time {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--orange);
+      white-space: nowrap;
+      padding-top: 1px;
+    }
+    .ad__slot-body {
+      line-height: 20px;
+    }
+    .ad__slot-ref {
+      color: var(--muted);
+    }
+    .ad__due {
+      color: var(--orange);
+    }
+    @media (max-width: 640px) {
+      .ad__slot {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+      .ad__slot-ref {
+        font-size: 11px;
+      }
+    }
+
     .ad__blockform {
       display: flex;
       flex-wrap: wrap;

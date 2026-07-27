@@ -6,6 +6,7 @@ import { getStripe } from '../../lib/stripe';
 import { toMin, slotIsFree } from '../../lib/availability';
 import { env } from '../../lib/env';
 import { sendEmail } from '../../lib/email';
+import { sendBookingNotifications } from '../../lib/notify';
 
 export const prerender = false;
 
@@ -122,7 +123,7 @@ export const POST: APIRoute = async ({ request }) => {
        WHERE id = $1`,
       [booking.id, amountTotal, total, balance, paymentIntent ?? null, promoCode]
     );
-    await sendConfirmation(booking, amountTotal, balance, promoCode);
+    await notifyFromDb(booking.id);
   } else if (kind === 'full') {
     await query(
       `UPDATE bookings SET status = 'paid_in_full',
@@ -133,7 +134,7 @@ export const POST: APIRoute = async ({ request }) => {
        WHERE id = $1`,
       [booking.id, amountTotal, paymentIntent ?? null, promoCode]
     );
-    await sendConfirmation(booking, amountTotal, 0, promoCode);
+    await notifyFromDb(booking.id);
   } else if (kind === 'balance') {
     const newPaid = booking.paid_pence + amountTotal;
     const newBalance = Math.max(0, booking.total_pence - newPaid);
@@ -153,24 +154,15 @@ export const POST: APIRoute = async ({ request }) => {
   return new Response('ok', { status: 200 });
 };
 
-async function sendConfirmation(
-  booking: BookingRow,
-  paidPence: number,
-  balancePence: number,
-  promoCode: string | null
-): Promise<void> {
-  await sendEmail(
-    booking.email,
-    `CHACE STUDIOS — booking confirmed: ${booking.ref}`,
-    `<p>Hi ${booking.name},</p>
-     <p>Your booking is confirmed.</p>
-     <ul>
-       <li><strong>Reference:</strong> ${booking.ref}</li>
-       <li><strong>Date:</strong> ${booking.date} at ${String(booking.start_time).slice(0, 5)}</li>
-       <li><strong>Paid:</strong> £${(paidPence / 100).toFixed(2)}${promoCode ? ` (promo ${promoCode})` : ''}</li>
-       ${balancePence > 0 ? `<li><strong>Balance due on/after session:</strong> £${(balancePence / 100).toFixed(2)}</li>` : ''}
-       <li><strong>Studio:</strong> 5 Pocklingtons Walk, Leicester LE1 6BT</li>
-     </ul>
-     <p>— CHACE STUDIOS</p>`
-  );
+/**
+ * Re-read the booking so the emails quote the post-payment figures
+ * (paid/total/balance/promo) rather than the pre-payment hold.
+ */
+async function notifyFromDb(bookingId: number): Promise<void> {
+  const { rows } = await query<BookingRow>(`SELECT * FROM bookings WHERE id = $1`, [bookingId]);
+  if (!rows[0]) {
+    console.error(`[notify] booking ${bookingId} vanished before notification`);
+    return;
+  }
+  await sendBookingNotifications(rows[0]);
 }

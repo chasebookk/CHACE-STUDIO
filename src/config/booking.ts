@@ -17,7 +17,26 @@ export interface BookablePackage {
   slug: string;
   title: string;
   tiers: Tier[];
+  /** Can only happen at one of our studios — no on-location option. */
+  studioOnly?: boolean;
 }
+
+export interface Studio {
+  id: string;
+  name: string;
+  address: string;
+}
+
+/** Add further studios here; the booking form turns into a real picker. */
+export const STUDIOS: Studio[] = [
+  { id: 'pocklingtons', name: 'CHACE STUDIOS', address: '5 Pocklingtons Walk, Leicester LE1 6BT, UK' },
+];
+
+export function getStudio(id: string | null | undefined): Studio | undefined {
+  return STUDIOS.find((s) => s.id === id);
+}
+
+export const DEFAULT_STUDIO = STUDIOS[0];
 
 export const DEPOSIT_RATE = 0.8; // 80% deposit / 20% balance
 
@@ -124,6 +143,7 @@ export const PACKAGES: BookablePackage[] = [
   {
     slug: 'studio-hire',
     title: 'Studio Hire',
+    studioOnly: true,
     tiers: [
       { id: '1-hour', label: '1 hour', pricePence: 3500, charge: 'full', durationMin: 60 },
       { id: '2-hours', label: '2 hours', pricePence: 6000, charge: 'full', durationMin: 120 },
@@ -132,6 +152,7 @@ export const PACKAGES: BookablePackage[] = [
   {
     slug: 'podcast',
     title: 'Podcast & Live Broadcast Production',
+    studioOnly: true,
     tiers: [
       {
         id: 'single-session',

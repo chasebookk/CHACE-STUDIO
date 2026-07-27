@@ -46,6 +46,7 @@ export interface BookingRow {
   email: string;
   phone: string | null;
   location_type: string;
+  studio_id: string | null;
   address: string | null;
   notes: string | null;
   date: string;

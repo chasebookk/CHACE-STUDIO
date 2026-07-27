@@ -57,6 +57,9 @@ CREATE TABLE IF NOT EXISTS blocked_slots (
 CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings (date);
 CREATE INDEX IF NOT EXISTS bookings_status_idx ON bookings (status);
 CREATE INDEX IF NOT EXISTS blocked_slots_date_idx ON blocked_slots (date);
+
+-- Migrations (idempotent; safe on databases created before these columns).
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS studio_id TEXT;
 `;
 
 try {
