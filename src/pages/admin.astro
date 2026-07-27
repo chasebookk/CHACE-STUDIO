@@ -1,0 +1,270 @@
+---
+import Base from '../layouts/Base.astro';
+import { query, type BookingRow } from '../lib/db';
+import { checkAdminAuth, unauthorized } from '../lib/auth';
+
+export const prerender = false;
+
+if (!checkAdminAuth(Astro.request)) {
+  return unauthorized();
+}
+
+const bookings = (
+  await query<BookingRow>(
+    `SELECT * FROM bookings
+     WHERE status != 'expired' AND date >= CURRENT_DATE - INTERVAL '7 days'
+     ORDER BY date ASC, start_time ASC
+     LIMIT 200`
+  )
+).rows;
+
+const blocked = (
+  await query<{ id: number; date: string; start_time: string | null; end_time: string | null; reason: string | null }>(
+    `SELECT * FROM blocked_slots WHERE date >= CURRENT_DATE ORDER BY date ASC LIMIT 100`
+  )
+).rows;
+
+const fmt = (p: number) => `£${(p / 100).toFixed(2)}`;
+const d = (s: string) => String(s).slice(0, 10);
+const t = (s: string | null) => (s ? String(s).slice(0, 5) : '');
+
+const statusLabel: Record<string, string> = {
+  pending_payment: '⏳ pending payment',
+  deposit_paid: '💰 deposit paid',
+  paid_in_full: '✅ paid in full',
+  cancelled: '✕ cancelled',
+};
+---
+
+<Base title="Admin | CHACE STUDIOS" description="Admin">
+  <main class="ad">
+    <h1 class="display ad__title">Bookings admin</h1>
+
+    <section class="ad__section">
+      <h2 class="display ad__h2">Upcoming bookings</h2>
+      {bookings.length === 0 ? (
+        <p class="ad__empty">No bookings yet.</p>
+      ) : (
+        <div class="ad__scroll">
+          <table class="ad__table">
+            <thead>
+              <tr>
+                <th>Ref</th><th>Name</th><th>Package</th><th>Date / time</th>
+                <th>Paid</th><th>Balance</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bookings.map((b) => (
+                <tr class:list={{ 'ad__row--conflict': (b.notes ?? '').includes('[CONFLICT') }}>
+                  <td class="ad__mono">{b.ref}</td>
+                  <td>
+                    {b.name}<br />
+                    <span class="ad__sub">{b.email}{b.phone ? ` · ${b.phone}` : ''}</span>
+                  </td>
+                  <td>
+                    {b.package_slug}<br />
+                    <span class="ad__sub">{b.tier_label}{b.promo_code ? ` · promo ${b.promo_code}` : ''}</span>
+                  </td>
+                  <td class="ad__mono">{d(b.date)} {t(b.start_time)}–{t(b.end_time)}</td>
+                  <td class="ad__mono">{fmt(b.paid_pence)}</td>
+                  <td class="ad__mono">{fmt(b.balance_pence)}</td>
+                  <td>
+                    {statusLabel[b.status] ?? b.status}
+                    {(b.notes ?? '').includes('[CONFLICT') && <span class="ad__flag">CONFLICT</span>}
+                  </td>
+                  <td class="ad__actions">
+                    {b.status === 'deposit_paid' && b.balance_pence > 0 && (
+                      <form method="POST" action="/api/admin/collect-balance">
+                        <input type="hidden" name="booking_id" value={b.id} />
+                        <button type="submit" class="ad__btn">Collect balance</button>
+                      </form>
+                    )}
+                    {b.balance_session_url && (
+                      <button type="button" class="ad__btn ad__btn--copy" data-copy={b.balance_session_url}>
+                        Copy pay link
+                      </button>
+                    )}
+                    {['pending_payment', 'deposit_paid', 'paid_in_full'].includes(b.status) && (
+                      <form method="POST" action="/api/admin/cancel" onsubmit="return confirm('Cancel this booking? (Refunds are manual, in Stripe.)')">
+                        <input type="hidden" name="id" value={b.id} />
+                        <button type="submit" class="ad__btn ad__btn--danger">Cancel</button>
+                      </form>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+
+    <section class="ad__section">
+      <h2 class="display ad__h2">Blocked dates &amp; times</h2>
+      <form method="POST" action="/api/admin/block" class="ad__blockform">
+        <label>Date <input type="date" name="date" required /></label>
+        <label>From <input type="time" name="start_time" /></label>
+        <label>To <input type="time" name="end_time" /></label>
+        <label>Reason <input type="text" name="reason" placeholder="e.g. holiday" /></label>
+        <button type="submit" class="ad__btn">Block</button>
+        <span class="ad__sub">Leave times empty to block the whole day.</span>
+      </form>
+
+      {blocked.length > 0 && (
+        <table class="ad__table ad__table--compact">
+          <tbody>
+            {blocked.map((bl) => (
+              <tr>
+                <td class="ad__mono">{d(bl.date)}</td>
+                <td class="ad__mono">{bl.start_time ? `${t(bl.start_time)}–${t(bl.end_time)}` : 'whole day'}</td>
+                <td>{bl.reason ?? ''}</td>
+                <td>
+                  <form method="POST" action="/api/admin/unblock">
+                    <input type="hidden" name="id" value={bl.id} />
+                    <button type="submit" class="ad__btn">Unblock</button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  </main>
+
+  <script>
+    document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(btn.dataset.copy ?? '');
+        const prev = btn.textContent;
+        btn.textContent = 'Copied ✓';
+        setTimeout(() => (btn.textContent = prev), 1500);
+      });
+    });
+  </script>
+
+  <style>
+    .ad {
+      padding: 48px var(--pad) 96px;
+    }
+    .ad__title {
+      font-size: clamp(28px, 4vw, 40px);
+      letter-spacing: -0.04em;
+      margin: 0 0 40px;
+    }
+    .ad__h2 {
+      font-size: 18px;
+      letter-spacing: -0.02em;
+      margin: 0 0 18px;
+    }
+    .ad__section {
+      margin-bottom: 56px;
+    }
+    .ad__empty {
+      color: var(--text-50);
+    }
+    .ad__scroll {
+      overflow-x: auto;
+    }
+    .ad__table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .ad__table th {
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--line-strong);
+    }
+    .ad__table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    .ad__row--conflict td {
+      background: rgba(255, 25, 9, 0.08);
+    }
+    .ad__mono {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .ad__sub {
+      color: var(--text-50);
+      font-size: 12px;
+    }
+    .ad__flag {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 8px;
+      background: var(--red);
+      color: var(--white);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      border-radius: 9999px;
+    }
+    .ad__actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .ad__btn {
+      height: 30px;
+      padding: 0 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      background: none;
+      color: var(--white);
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .ad__btn:hover {
+      border-color: var(--white);
+    }
+    .ad__btn--danger:hover {
+      border-color: var(--red);
+      color: var(--red);
+    }
+    .ad__btn--copy {
+      border-color: var(--orange);
+    }
+    .ad__blockform {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .ad__blockform label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .ad__blockform input {
+      height: 34px;
+      padding: 0 10px;
+      background: var(--card);
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      color: var(--white);
+      color-scheme: dark;
+      font-family: var(--font-body);
+      font-size: 13px;
+    }
+  </style>
+</Base>

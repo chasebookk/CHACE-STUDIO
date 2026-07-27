@@ -1,0 +1,155 @@
+---
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { query, type BookingRow } from '../../lib/db';
+import { getStripe } from '../../lib/stripe';
+import { ADDRESS, MAPS_URL } from '../../data/portfolio';
+
+export const prerender = false;
+
+const sessionId = Astro.url.searchParams.get('session_id');
+let booking: BookingRow | undefined;
+let paidPence = 0;
+let error: string | undefined;
+
+if (!sessionId) {
+  error = 'Missing checkout session.';
+} else {
+  try {
+    const session = await getStripe().checkout.sessions.retrieve(sessionId);
+    const bookingId = Number(session.metadata?.booking_id);
+    paidPence = session.amount_total ?? 0;
+    if (bookingId) {
+      const found = await query<BookingRow>(`SELECT * FROM bookings WHERE id = $1`, [bookingId]);
+      booking = found.rows[0];
+    }
+    if (!booking) error = 'Booking not found.';
+    else if (session.payment_status !== 'paid') error = 'Payment not completed yet.';
+  } catch (err) {
+    console.error('success page error:', err);
+    error = 'Could not look up your booking.';
+  }
+}
+
+const fmt = (p: number) => `£${(p / 100).toFixed(2)}`;
+const dateNice = booking
+  ? new Date(`${String(booking.date).slice(0, 10)}T12:00:00`).toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  : '';
+// Webhook may not have landed yet — compute display balance from the session.
+const isBalancePayment = booking && paidPence > 0 && booking.status === 'deposit_paid' && booking.paid_pence > 0 && paidPence === booking.balance_pence;
+---
+
+<Base title="Booking confirmed | CHACE STUDIOS" description="Your CHACE STUDIOS booking is confirmed.">
+  <Header />
+
+  <main class="bs">
+    {error ? (
+      <section class="bs__card">
+        <h1 class="display bs__title">Hmm.</h1>
+        <p class="bs__sub">{error}</p>
+        <p class="bs__sub">
+          If you've just paid, refresh in a few seconds — or email
+          <a href="mailto:bookings@chace.studio">bookings@chace.studio</a> with any questions.
+        </p>
+        <a href="/packages" class="btn btn--fill">Back to packages</a>
+      </section>
+    ) : (
+      <section class="bs__card">
+        <p class="eyebrow">— Booking {isBalancePayment ? 'balance received' : 'confirmed'}</p>
+        <h1 class="display bs__title">See you at<br /><span class="grad-text">the studio.</span></h1>
+
+        <div class="panel-dark bs__panel">
+          <ul>
+            <li><strong>Reference:</strong> {booking!.ref} — quote this in any message</li>
+            <li><strong>Session:</strong> {booking!.tier_label}</li>
+            <li><strong>Date:</strong> {dateNice} at {String(booking!.start_time).slice(0, 5)}</li>
+            <li><strong>Paid now:</strong> {fmt(paidPence)}</li>
+            {booking!.status === 'deposit_paid' && booking!.balance_pence > 0 && (
+              <li><strong>Balance due on/after session:</strong> {fmt(booking!.balance_pence)} — we'll send a payment link</li>
+            )}
+            <li><strong>Where:</strong> <a href={MAPS_URL} target="_blank" rel="noopener">{ADDRESS}</a></li>
+          </ul>
+        </div>
+
+        <div class="bs__next">
+          <h2 class="display bs__next-title">What happens next</h2>
+          <p>
+            Stripe has emailed your receipt. Arrive 5 minutes early; bring your outfits
+            pressed and on hangers. Questions or changes — email
+            <a href="mailto:bookings@chace.studio">bookings@chace.studio</a> with your reference.
+          </p>
+        </div>
+
+        <a href="/" class="btn btn--fill">Back to the site</a>
+      </section>
+    )}
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  .bs {
+    padding: 96px var(--pad) 120px;
+    display: flex;
+    justify-content: center;
+  }
+  .bs__card {
+    max-width: 640px;
+    width: 100%;
+  }
+  .bs__card .eyebrow {
+    display: block;
+    margin: 0 0 28px;
+  }
+  .bs__title {
+    font-size: clamp(40px, 7vw, 72px);
+    line-height: 1;
+    letter-spacing: -0.05em;
+    margin: 0 0 32px;
+  }
+  .bs__sub {
+    font-size: 16px;
+    line-height: 26px;
+    color: var(--text-60);
+    margin: 0 0 20px;
+  }
+  .bs__sub a {
+    color: var(--white);
+    text-decoration: underline;
+  }
+  .bs__panel {
+    margin-bottom: 32px;
+  }
+  .bs__panel li {
+    font-size: 14.5px;
+    line-height: 24px;
+  }
+  .bs__panel a {
+    text-decoration: underline;
+  }
+  .bs__next {
+    margin-bottom: 36px;
+  }
+  .bs__next-title {
+    font-size: 17px;
+    letter-spacing: -0.02em;
+    margin: 0 0 10px;
+  }
+  .bs__next p {
+    font-size: 14.5px;
+    line-height: 24px;
+    color: var(--text-60);
+    margin: 0;
+  }
+  .bs__next a {
+    color: var(--white);
+    text-decoration: underline;
+  }
+</style>

@@ -5,6 +5,20 @@ import Footer from '../components/Footer.astro';
 import Carousel from '../components/Carousel.astro';
 import RateCard from '../components/RateCard.astro';
 import { EMAIL } from '../data/portfolio';
+import { PACKAGES as BOOKABLE } from '../config/booking';
+
+// Serialized for the client-side booking widget.
+const bookingData = BOOKABLE.map((p) => ({
+  slug: p.slug,
+  title: p.title,
+  tiers: p.tiers.map((t) => ({
+    id: t.id,
+    label: t.label,
+    pricePence: t.pricePence,
+    charge: t.charge,
+    fromPrice: !!t.fromPrice,
+  })),
+}));
 
 // Package data mirrors PACKAGES.md (authoritative) — names, prices and copy exact.
 const groups = [
@@ -185,7 +199,6 @@ const groups = [
   },
 ];
 
-const allPackages = groups.flatMap((g) => g.cards.map((c) => c.title));
 
 const included = [
   'Private online gallery to select your images',
@@ -208,13 +221,6 @@ const addons = [
   'Studio rental fees are payable by the client · No refunds',
 ];
 
-const timeSlots = [
-  'Morning (9am–12pm)',
-  'Afternoon (12pm–4pm)',
-  'Evening (4pm–8pm)',
-  'Late (8pm–10pm)',
-  'Midnight session (from 10pm)',
-];
 ---
 
 <Base
@@ -270,84 +276,88 @@ const timeSlots = [
       </ul>
     </section>
 
-    <!-- Booking form -->
+    <!-- Booking widget: real availability + Stripe Checkout -->
     <section id="book" class="pk-book sec-light">
       <div class="pk-book__inner">
-        <p class="eyebrow reveal">— Booking request</p>
+        <p class="eyebrow reveal">— Book &amp; pay online</p>
         <h2 class="display pk-book__title reveal">Book a Shoot</h2>
         <p class="pk-book__sub reveal">
-          Fill the form and your email app will open — hit send and we'll confirm your slot.
+          Pick a package, choose an available time and pay securely — card, Apple Pay,
+          Google Pay, Klarna, PayPal and Pay by Bank. Your slot is held for 30 minutes
+          while you pay. Got a promo code? There's a box for it on the payment page.
         </p>
 
-        <form class="pk-form reveal" data-booking-form novalidate>
+        <div class="pk-form reveal" id="bw">
           <div class="pk-field">
-            <label class="pk-label" for="name">Name <span>*</span></label>
-            <input class="pk-input" id="name" name="name" type="text" placeholder="Jane Doe" required />
+            <label class="pk-label" for="bw-package">Package <span>*</span></label>
+            <select class="pk-input pk-select" id="bw-package"></select>
           </div>
 
           <div class="pk-field">
-            <label class="pk-label" for="email">Email address <span>*</span></label>
-            <input class="pk-input" id="email" name="email" type="email" placeholder="jane@email.com" required />
+            <label class="pk-label" for="bw-tier">Option <span>*</span></label>
+            <select class="pk-input pk-select" id="bw-tier"></select>
+          </div>
+
+          <p class="bw-price pk-field--full" id="bw-price"></p>
+
+          <div class="pk-field pk-field--full">
+            <span class="pk-label">Pick a date <span>*</span></span>
+            <div class="bw-cal">
+              <div class="bw-cal__head">
+                <button type="button" class="bw-cal__nav" id="bw-prev" aria-label="Previous month">←</button>
+                <span class="bw-cal__label" id="bw-month-label"></span>
+                <button type="button" class="bw-cal__nav" id="bw-next" aria-label="Next month">→</button>
+              </div>
+              <div class="bw-cal__dow">
+                <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
+              </div>
+              <div class="bw-cal__grid" id="bw-days" role="listbox" aria-label="Available dates"></div>
+            </div>
+          </div>
+
+          <div class="pk-field pk-field--full" id="bw-times-wrap" hidden>
+            <span class="pk-label">Pick a time <span>*</span></span>
+            <div class="bw-times" id="bw-times"></div>
           </div>
 
           <div class="pk-field">
-            <label class="pk-label" for="phone">Phone</label>
-            <input class="pk-input" id="phone" name="phone" type="tel" placeholder="07xxx xxxxxx" />
+            <label class="pk-label" for="bw-name">Name <span>*</span></label>
+            <input class="pk-input" id="bw-name" type="text" placeholder="Jane Doe" required />
           </div>
 
           <div class="pk-field">
-            <label class="pk-label" for="package">Package <span>*</span></label>
-            <select class="pk-input pk-select" id="package" name="package" required>
-              <option value="" disabled selected>Choose a package…</option>
-              {allPackages.map((p) => (
-                <option value={p}>{p}</option>
-              ))}
+            <label class="pk-label" for="bw-email">Email address <span>*</span></label>
+            <input class="pk-input" id="bw-email" type="email" placeholder="jane@email.com" required />
+          </div>
+
+          <div class="pk-field">
+            <label class="pk-label" for="bw-phone">Phone</label>
+            <input class="pk-input" id="bw-phone" type="tel" placeholder="07xxx xxxxxx" />
+          </div>
+
+          <div class="pk-field">
+            <label class="pk-label" for="bw-location">Shoot location</label>
+            <select class="pk-input pk-select" id="bw-location">
+              <option value="studio" selected>Studio</option>
+              <option value="on_location">On location</option>
             </select>
           </div>
 
-          <div class="pk-field">
-            <label class="pk-label" for="looks">Number of looks / outfits</label>
-            <input class="pk-input" id="looks" name="looks" type="number" min="1" placeholder="1" />
-          </div>
-
-          <div class="pk-field">
-            <label class="pk-label" for="location">Shoot location</label>
-            <select class="pk-input pk-select" id="location" name="location">
-              <option value="Studio" selected>Studio</option>
-              <option value="On location">On location</option>
-            </select>
-          </div>
-
-          <div class="pk-field pk-field--full" data-address-field hidden>
-            <label class="pk-label" for="address">Location address</label>
-            <input class="pk-input" id="address" name="address" type="text" placeholder="Venue or address for the shoot" />
-          </div>
-
-          <div class="pk-field">
-            <label class="pk-label" for="date">Proposed shoot date <span>*</span></label>
-            <input class="pk-input" id="date" name="date" type="date" required />
-          </div>
-
-          <div class="pk-field">
-            <label class="pk-label" for="slot">Proposed time slot</label>
-            <select class="pk-input pk-select" id="slot" name="slot">
-              <option value="" disabled selected>Choose a slot…</option>
-              {timeSlots.map((t) => (
-                <option value={t}>{t}</option>
-              ))}
-            </select>
+          <div class="pk-field pk-field--full" id="bw-address-wrap" hidden>
+            <label class="pk-label" for="bw-address">Location address</label>
+            <input class="pk-input" id="bw-address" type="text" placeholder="Venue or address for the shoot" />
           </div>
 
           <div class="pk-field pk-field--full">
-            <label class="pk-label" for="details">Anything else</label>
-            <textarea class="pk-input pk-textarea" id="details" name="details" placeholder="Tell us about your shoot, vision, references…"></textarea>
+            <label class="pk-label" for="bw-notes">Anything else</label>
+            <textarea class="pk-input pk-textarea" id="bw-notes" placeholder="Tell us about your shoot, vision, references…"></textarea>
           </div>
 
-          <button type="submit" class="btn btn--fill pk-submit">Send Booking Request</button>
-          <p class="pk-form__note">
-            Your email app will open — hit send and we'll confirm your slot.
+          <button type="button" class="btn btn--fill pk-submit" id="bw-pay">Confirm &amp; Pay</button>
+          <p class="pk-form__note" id="bw-status">
+            You'll be taken to our secure Stripe payment page.
           </p>
-        </form>
+        </div>
       </div>
     </section>
   </main>
@@ -550,6 +560,128 @@ const timeSlots = [
     text-align: center;
   }
 
+  /* ---- Booking widget ---- */
+  .bw-price {
+    font-size: 15px;
+    line-height: 23px;
+    color: var(--ink-60);
+    margin: -6px 0 0;
+  }
+  .bw-price :global(strong) {
+    color: var(--ink);
+  }
+
+  .bw-cal {
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .bw-cal__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .bw-cal__label {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .bw-cal__nav {
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 9999px;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .bw-cal__nav:hover {
+    border-color: var(--ink);
+  }
+  .bw-cal__dow {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .bw-cal__dow span {
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ink-50);
+  }
+  .bw-cal__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .bw-cal__day {
+    aspect-ratio: 1;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: none;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  }
+  .bw-cal__day:hover:not(:disabled) {
+    border-color: var(--ink);
+  }
+  .bw-cal__day:disabled {
+    color: rgba(0, 0, 0, 0.22);
+    cursor: default;
+  }
+  .bw-cal__day.is-selected {
+    background: var(--grad-accent);
+    color: var(--white);
+  }
+  .bw-cal__loading {
+    grid-column: 1 / -1;
+    font-size: 13px;
+    color: var(--ink-50);
+    padding: 8px 0;
+  }
+
+  .bw-times {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .bw-time {
+    height: 40px;
+    padding: 0 18px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 9999px;
+    background: none;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--ink);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  }
+  .bw-time:hover {
+    border-color: var(--ink);
+  }
+  .bw-time.is-selected {
+    background: var(--grad-accent);
+    border-color: transparent;
+    color: var(--white);
+  }
+
+  .bw-status--error {
+    color: var(--red);
+  }
+
   @media (max-width: 720px) {
     .pk-form {
       grid-template-columns: 1fr;
@@ -560,50 +692,264 @@ const timeSlots = [
   }
 </style>
 
+<script type="application/json" id="bw-data" set:html={JSON.stringify(bookingData)}></script>
+
 <script>
-  // "Book" buttons on rate cards preselect the package in the form
-  const select = document.querySelector<HTMLSelectElement>('#package');
+  interface TierData {
+    id: string;
+    label: string;
+    pricePence: number;
+    charge: 'full' | 'deposit';
+    fromPrice: boolean;
+  }
+  interface PackageData {
+    slug: string;
+    title: string;
+    tiers: TierData[];
+  }
+
+  const packages: PackageData[] = JSON.parse(
+    document.getElementById('bw-data')!.textContent ?? '[]'
+  );
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const pkgSelect = $<HTMLSelectElement>('bw-package');
+  const tierSelect = $<HTMLSelectElement>('bw-tier');
+  const priceEl = $('bw-price');
+  const monthLabel = $('bw-month-label');
+  const daysEl = $('bw-days');
+  const timesWrap = $('bw-times-wrap');
+  const timesEl = $('bw-times');
+  const locationSel = $<HTMLSelectElement>('bw-location');
+  const addressWrap = $('bw-address-wrap');
+  const payBtn = $<HTMLButtonElement>('bw-pay');
+  const statusEl = $('bw-status');
+
+  const fmt = (p: number) => (p % 100 === 0 ? `£${p / 100}` : `£${(p / 100).toFixed(2)}`);
+
+  const today = new Date();
+  let viewYear = today.getFullYear();
+  let viewMonth = today.getMonth() + 1; // 1–12
+  let selectedDate: string | null = null;
+  let selectedTime: string | null = null;
+
+  const currentPkg = () => packages.find((p) => p.slug === pkgSelect.value)!;
+  const currentTier = () =>
+    currentPkg().tiers.find((t) => t.id === tierSelect.value) ?? currentPkg().tiers[0];
+
+  function setStatus(msg: string, isError = false) {
+    statusEl.textContent = msg;
+    statusEl.classList.toggle('bw-status--error', isError);
+  }
+
+  function renderPackages() {
+    pkgSelect.innerHTML = packages
+      .map((p) => `<option value="${p.slug}">${p.title}</option>`)
+      .join('');
+    renderTiers();
+  }
+
+  function renderTiers() {
+    tierSelect.innerHTML = currentPkg()
+      .tiers.map((t) => `<option value="${t.id}">${t.label}</option>`)
+      .join('');
+    renderPrice();
+  }
+
+  function renderPrice() {
+    const t = currentTier();
+    const from = t.fromPrice ? 'From ' : '';
+    if (t.charge === 'deposit') {
+      const dep = Math.round(t.pricePence * 0.8);
+      priceEl.innerHTML = `${from}<strong>${fmt(t.pricePence)}</strong> — pay <strong>${fmt(dep)}</strong> deposit today (80%), ${fmt(t.pricePence - dep)} balance due on/after your session.`;
+    } else {
+      priceEl.innerHTML = `${from}<strong>${fmt(t.pricePence)}</strong> — full payment today.`;
+    }
+  }
+
+  async function loadMonth() {
+    monthLabel.textContent = new Date(viewYear, viewMonth - 1, 1).toLocaleDateString('en-GB', {
+      month: 'long',
+      year: 'numeric',
+    });
+    daysEl.innerHTML = '<span class="bw-cal__loading">Loading…</span>';
+
+    let available: string[] = [];
+    try {
+      const res = await fetch(
+        `/api/availability-month?package=${pkgSelect.value}&tier=${tierSelect.value}&year=${viewYear}&month=${viewMonth}`
+      );
+      if (!res.ok) throw new Error();
+      available = (await res.json()).available;
+    } catch {
+      daysEl.innerHTML =
+        '<span class="bw-cal__loading">Could not load availability — refresh to retry.</span>';
+      return;
+    }
+
+    const first = new Date(viewYear, viewMonth - 1, 1);
+    const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
+    const leadBlanks = (first.getDay() + 6) % 7; // Monday-first grid
+
+    daysEl.innerHTML = '';
+    for (let i = 0; i < leadBlanks; i++) {
+      daysEl.appendChild(document.createElement('span'));
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = `${viewYear}-${String(viewMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'bw-cal__day';
+      btn.textContent = String(d);
+      if (!available.includes(date)) {
+        btn.disabled = true;
+      } else {
+        btn.addEventListener('click', () => selectDate(date, btn));
+      }
+      if (date === selectedDate) btn.classList.add('is-selected');
+      daysEl.appendChild(btn);
+    }
+  }
+
+  async function selectDate(date: string, btn: HTMLButtonElement) {
+    selectedDate = date;
+    selectedTime = null;
+    daysEl.querySelectorAll('.is-selected').forEach((el) => el.classList.remove('is-selected'));
+    btn.classList.add('is-selected');
+
+    timesWrap.hidden = false;
+    timesEl.innerHTML = '<span class="bw-cal__loading">Loading times…</span>';
+    try {
+      const res = await fetch(
+        `/api/availability?package=${pkgSelect.value}&tier=${tierSelect.value}&date=${date}`
+      );
+      if (!res.ok) throw new Error();
+      const { slots } = await res.json();
+      if (!slots.length) {
+        timesEl.innerHTML =
+          '<span class="bw-cal__loading">No free times left on this day — pick another date.</span>';
+        return;
+      }
+      timesEl.innerHTML = '';
+      for (const slot of slots as string[]) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'bw-time';
+        b.textContent = slot;
+        b.addEventListener('click', () => {
+          selectedTime = slot;
+          timesEl
+            .querySelectorAll('.is-selected')
+            .forEach((el) => el.classList.remove('is-selected'));
+          b.classList.add('is-selected');
+        });
+        timesEl.appendChild(b);
+      }
+    } catch {
+      timesEl.innerHTML = '<span class="bw-cal__loading">Could not load times — try again.</span>';
+    }
+  }
+
+  function resetSelection() {
+    selectedDate = null;
+    selectedTime = null;
+    timesWrap.hidden = true;
+    timesEl.innerHTML = '';
+    loadMonth();
+  }
+
+  pkgSelect.addEventListener('change', () => {
+    renderTiers();
+    resetSelection();
+  });
+  tierSelect.addEventListener('change', () => {
+    renderPrice();
+    resetSelection();
+  });
+
+  $('bw-prev').addEventListener('click', () => {
+    viewMonth--;
+    if (viewMonth < 1) {
+      viewMonth = 12;
+      viewYear--;
+    }
+    loadMonth();
+  });
+  $('bw-next').addEventListener('click', () => {
+    viewMonth++;
+    if (viewMonth > 12) {
+      viewMonth = 1;
+      viewYear++;
+    }
+    loadMonth();
+  });
+
+  locationSel.addEventListener('change', () => {
+    addressWrap.hidden = locationSel.value !== 'on_location';
+  });
+
+  // Rate-card "Book" buttons preselect their package and scroll here.
+  const titleToSlug = new Map(packages.map((p) => [p.title, p.slug]));
   document.querySelectorAll<HTMLAnchorElement>('[data-package]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (!select) return;
-      const pkg = btn.dataset.package ?? '';
-      if ([...select.options].some((o) => o.value === pkg)) select.value = pkg;
+      const slug = titleToSlug.get(btn.dataset.package ?? '');
+      if (slug && pkgSelect.value !== slug) {
+        pkgSelect.value = slug;
+        renderTiers();
+        resetSelection();
+      }
     });
   });
 
-  // Show the address field only for on-location shoots
-  const location = document.querySelector<HTMLSelectElement>('#location');
-  const addressField = document.querySelector<HTMLElement>('[data-address-field]');
-  location?.addEventListener('change', () => {
-    if (addressField) addressField.hidden = location.value !== 'On location';
+  payBtn.addEventListener('click', async () => {
+    const name = $<HTMLInputElement>('bw-name').value.trim();
+    const email = $<HTMLInputElement>('bw-email').value.trim();
+
+    if (!selectedDate || !selectedTime) return setStatus('Pick a date and time first.', true);
+    if (!name) return setStatus('Please enter your name.', true);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return setStatus('Please enter a valid email.', true);
+
+    payBtn.disabled = true;
+    setStatus('Creating your secure checkout…');
+
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          package: pkgSelect.value,
+          tier: tierSelect.value,
+          date: selectedDate,
+          time: selectedTime,
+          name,
+          email,
+          phone: $<HTMLInputElement>('bw-phone').value.trim(),
+          locationType: locationSel.value,
+          address: $<HTMLInputElement>('bw-address').value.trim(),
+          notes: $<HTMLTextAreaElement>('bw-notes').value.trim(),
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.url) {
+        setStatus('Redirecting to payment…');
+        window.location.href = data.url;
+        return;
+      }
+      if (res.status === 409) {
+        setStatus(data.message ?? 'That slot was just taken — pick another time.', true);
+        const dayBtn = daysEl.querySelector<HTMLButtonElement>('.bw-cal__day.is-selected');
+        if (selectedDate && dayBtn) selectDate(selectedDate, dayBtn);
+      } else {
+        setStatus(data.error ?? 'Something went wrong — please try again.', true);
+      }
+    } catch {
+      setStatus('Network error — please try again.', true);
+    }
+    payBtn.disabled = false;
   });
 
-  // Static site: submitting builds a mailto to bookings@chace.studio
-  const form = document.querySelector<HTMLFormElement>('[data-booking-form]');
-  form?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (!form.reportValidity()) return;
-
-    const data = new FormData(form);
-    const get = (k: string) => String(data.get(k) ?? '').trim();
-    const pkg = get('package') || 'General enquiry';
-
-    const lines = [
-      `Name: ${get('name')}`,
-      `Email: ${get('email')}`,
-      `Phone: ${get('phone') || '—'}`,
-      `Package: ${pkg}`,
-      `Number of looks/outfits: ${get('looks') || '—'}`,
-      `Shoot location: ${get('location')}${get('location') === 'On location' && get('address') ? ` — ${get('address')}` : ''}`,
-      `Proposed date: ${get('date')}`,
-      `Proposed time slot: ${get('slot') || '—'}`,
-      '',
-      'Details:',
-      get('details') || '—',
-    ];
-
-    const subject = encodeURIComponent(`Booking request — ${pkg}`);
-    const body = encodeURIComponent(lines.join('\n'));
-    window.location.href = `mailto:bookings@chace.studio?subject=${subject}&body=${body}`;
-  });
+  renderPackages();
+  loadMonth();
 </script>
