@@ -4,24 +4,29 @@ import { DEPOSIT_RATE } from '../../config/booking';
 import { query, type BookingRow } from '../../lib/db';
 import { getStripe } from '../../lib/stripe';
 import { toMin, slotIsFree } from '../../lib/availability';
-import { requireEnv } from '../../lib/env';
+import { env } from '../../lib/env';
 import { sendEmail } from '../../lib/email';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
   const stripe = getStripe();
+
+  // A missing secret is a server misconfiguration, not a bad request — keep it
+  // distinct from signature failures so monitoring can tell them apart.
+  const webhookSecret = env('STRIPE_WEBHOOK_SECRET');
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not configured — cannot verify events');
+    return new Response('Webhook not configured', { status: 500 });
+  }
+
   const signature = request.headers.get('stripe-signature');
   if (!signature) return new Response('Missing signature', { status: 400 });
 
   let event: Stripe.Event;
   try {
     const payload = await request.text();
-    event = await stripe.webhooks.constructEventAsync(
-      payload,
-      signature,
-      requireEnv('STRIPE_WEBHOOK_SECRET')
-    );
+    event = await stripe.webhooks.constructEventAsync(payload, signature, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
     return new Response('Invalid signature', { status: 400 });
