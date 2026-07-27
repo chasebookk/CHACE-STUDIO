@@ -1,0 +1,346 @@
+---
+// Rendered on demand so ?for= and ?note= appear in the HTML itself —
+// no flash of un-personalised content before JS runs.
+export const prerender = false;
+
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import BookingWidget from '../../components/BookingWidget.astro';
+import { getCard, INCLUDED } from '../../data/packages';
+import { getPackage, chargeNowPence } from '../../config/booking';
+import { MAPS_URL, ADDRESS } from '../../data/portfolio';
+
+const { slug } = Astro.params;
+const card = slug ? getCard(slug) : undefined;
+const bookable = slug ? getPackage(slug) : undefined;
+
+// Only genuinely bookable packages get a booking page.
+if (!card || !bookable || card.enquiryOnly) {
+  return Astro.redirect('/packages', 302);
+}
+
+// Personalisation, length-capped so a long link can't wreck the layout.
+const clip = (v: string | null, max: number) => (v ? v.trim().slice(0, max) : '');
+const preparedFor = clip(Astro.url.searchParams.get('for'), 80);
+const note = clip(Astro.url.searchParams.get('note'), 400);
+
+const money = (p: number) => (p % 100 === 0 ? `£${p / 100}` : `£${(p / 100).toFixed(2)}`);
+
+// Deposit vs full payment, straight from the booking config.
+const tierTerms = bookable.tiers.map((t) => ({
+  label: t.label,
+  price: money(t.pricePence),
+  duration: `${t.durationMin} min`,
+  terms:
+    t.charge === 'deposit'
+      ? `${money(chargeNowPence(t))} deposit today · ${money(t.pricePence - chargeNowPence(t))} after the session`
+      : 'Paid in full at booking',
+}));
+
+// Some packages advertise tiers that aren't self-serve (e.g. the podcast
+// recurring package). Say so rather than leaving a client hunting for it.
+const hasOffPlatformTiers = card.prices.length > bookable.tiers.length;
+
+const title = `${card.title} — Book with CHACE STUDIOS`;
+---
+
+<Base title={title} description={card.tagline}>
+  <Header />
+
+  <main class="bk">
+    <!-- Proposal header -->
+    <section class="bk-hero sec-light">
+      <div class="bk-hero__grid">
+        <div class="bk-hero__copy">
+          {preparedFor && <p class="bk-prepared">Prepared for {preparedFor}</p>}
+          <p class="eyebrow bk-eyebrow">— Booking proposal</p>
+          <h1 class="display bk-title">{card.title}</h1>
+          <p class="bk-tagline">{card.tagline}</p>
+
+          <div class="bk-prices">
+            {card.prices.map((p) => (
+              <div class="bk-price">
+                <span class="display bk-price__amount">{p.amount}</span>
+                <span class="bk-price__label">{p.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <a href="#book" class="btn btn--fill bk-cta">Check availability</a>
+        </div>
+
+        <figure class="bk-hero__media">
+          <img src={card.image} alt={card.title} width="1000" height="1000" fetchpriority="high" />
+        </figure>
+      </div>
+    </section>
+
+    <!-- What's included -->
+    <section class="bk-detail sec-light">
+      <div class="bk-detail__grid">
+        <div>
+          <h2 class="display bk-h2">What's included</h2>
+          <div class="panel-dark bk-panel">
+            <ul>
+              {card.bullets.map((b) => (
+                <li>{b}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="display bk-h2">Options &amp; payment</h2>
+          <div class="bk-tiers">
+            {tierTerms.map((t) => (
+              <div class="bk-tier">
+                <div class="bk-tier__row">
+                  <span class="bk-tier__label">{t.label}</span>
+                  <span class="display bk-tier__price">{t.price}</span>
+                </div>
+                <span class="bk-tier__terms">{t.duration} · {t.terms}</span>
+              </div>
+            ))}
+          </div>
+          {hasOffPlatformTiers && (
+            <p class="bk-where">
+              Recurring and bespoke arrangements aren't bookable online — email
+              <a href="mailto:bookings@chace.studio"> bookings@chace.studio</a> and we'll set them up for you.
+            </p>
+          )}
+          <p class="bk-where">
+            Studio sessions take place at <a href={MAPS_URL} target="_blank" rel="noopener">{ADDRESS}</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Every booking includes -->
+    <section class="bk-included sec-light">
+      <div class="panel-dark bk-included__panel">
+        <h2 class="display bk-included__title">Every booking includes</h2>
+        <ul>
+          {INCLUDED.map((item) => (
+            <li>{item}</li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <BookingWidget
+      lockedSlug={card.slug}
+      heading="Book your session"
+      intro="Choose a date and time below and pay securely — card, Apple Pay, Google Pay, Klarna, PayPal and Pay by Bank. Your slot is held for 30 minutes while you pay."
+      note={note || undefined}
+    />
+
+    <p class="bk-foot sec-light">
+      Questions before you book? Email
+      <a href="mailto:bookings@chace.studio">bookings@chace.studio</a> —
+      or <a href="/packages">see all packages</a>.
+    </p>
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  .bk {
+    background: var(--white);
+  }
+
+  /* ---- Proposal header ---- */
+  .bk-hero {
+    padding-top: 72px;
+    padding-bottom: 56px;
+  }
+  .bk-hero__grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+
+  .bk-prepared {
+    display: inline-block;
+    margin: 0 0 22px;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    background: var(--grad-accent);
+    color: var(--white);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .bk-eyebrow {
+    margin: 0 0 20px;
+  }
+
+  .bk-title {
+    font-size: clamp(34px, 5vw, 60px);
+    line-height: 1.02;
+    letter-spacing: -0.045em;
+    margin: 0 0 20px;
+  }
+
+  .bk-tagline {
+    font-size: 17px;
+    line-height: 27px;
+    color: var(--ink-60);
+    margin: 0 0 30px;
+    max-width: 46ch;
+  }
+
+  .bk-prices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    margin-bottom: 32px;
+  }
+  .bk-price {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .bk-price__amount {
+    color: var(--ink);
+    font-size: 32px;
+    letter-spacing: -1.6px;
+  }
+  .bk-price__label {
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--ink-50);
+    max-width: 22ch;
+  }
+
+  .bk-hero__media {
+    margin: 0;
+  }
+  .bk-hero__media img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--radius);
+  }
+
+  /* ---- Detail ---- */
+  .bk-detail {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+  .bk-detail__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+  .bk-h2 {
+    font-size: 19px;
+    letter-spacing: -0.03em;
+    margin: 0 0 16px;
+  }
+  .bk-panel :global(li) {
+    font-size: 14.5px;
+    line-height: 23px;
+  }
+
+  .bk-tiers {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .bk-tier {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 18px;
+    border: 1px solid var(--line-dark);
+    border-radius: 12px;
+  }
+  .bk-tier__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .bk-tier__label {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .bk-tier__price {
+    color: var(--ink);
+    font-size: 22px;
+    letter-spacing: -1px;
+  }
+  .bk-tier__terms {
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--ink-50);
+  }
+
+  .bk-where {
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--ink-50);
+    margin: 16px 0 0;
+  }
+  .bk-where a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ---- Included band ---- */
+  .bk-included {
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+  .bk-included__panel {
+    padding: 32px 36px;
+  }
+  .bk-included__title {
+    color: var(--white);
+    font-size: clamp(20px, 3vw, 26px);
+    letter-spacing: -0.04em;
+    margin: 0 0 20px;
+  }
+  .bk-included__panel :global(li) {
+    font-size: 14.5px;
+    line-height: 23px;
+  }
+
+  .bk-foot {
+    padding: 8px var(--pad) 64px;
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--ink-50);
+    text-align: center;
+  }
+  .bk-foot a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  @media (max-width: 900px) {
+    .bk-hero__grid,
+    .bk-detail__grid {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+    .bk-hero__media {
+      order: -1;
+    }
+    .bk-included__panel {
+      padding: 26px 22px;
+    }
+  }
+</style>

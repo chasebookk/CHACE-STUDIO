@@ -2,7 +2,16 @@
 import Base from '../layouts/Base.astro';
 import { query, type BookingRow } from '../lib/db';
 import { checkAdminAuth, unauthorized } from '../lib/auth';
-import { getPackage, getStudio } from '../config/booking';
+import { getPackage, getStudio, PACKAGES as BOOKABLE } from '../config/booking';
+import { getCard } from '../data/packages';
+
+const siteBase = (import.meta.env.PUBLIC_SITE_URL ?? Astro.url.origin).replace(/\/$/, '');
+const shareLinks = BOOKABLE.map((p) => ({
+  slug: p.slug,
+  title: p.title,
+  image: getCard(p.slug)?.image,
+  url: `${siteBase}/book/${p.slug}`,
+}));
 
 export const prerender = false;
 
@@ -172,6 +181,26 @@ const mins = (b: BookingRow) => {
     </section>
 
     <section class="ad__section">
+      <h2 class="display ad__h2">Shareable booking links</h2>
+      <p class="ad__hint">
+        One package per page, form locked to it. Personalise before sending by adding
+        <code>?for=Coach%20Samira</code> and/or <code>&amp;note=Your%20message</code>.
+      </p>
+      <div class="ad__links">
+        {shareLinks.map((l) => (
+          <div class="ad__link-card">
+            {l.image && <img class="ad__link-img" src={l.image} alt="" width="56" height="56" loading="lazy" />}
+            <div class="ad__link-body">
+              <span class="ad__link-title">{l.title}</span>
+              <a class="ad__link-url" href={`/book/${l.slug}`} target="_blank" rel="noopener">/book/{l.slug} ↗</a>
+            </div>
+            <button type="button" class="ad__btn ad__btn--copy" data-copy={l.url}>Copy link</button>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section class="ad__section">
       <h2 class="display ad__h2">Blocked dates &amp; times</h2>
       <form method="POST" action="/api/admin/block" class="ad__blockform">
         <label>Date <input type="date" name="date" required /></label>
@@ -310,6 +339,63 @@ const mins = (b: BookingRow) => {
     .ad__btn--copy {
       border-color: var(--orange);
     }
+    /* ---- Shareable links ---- */
+    .ad__hint {
+      font-size: 12.5px;
+      line-height: 20px;
+      color: var(--text-50);
+      margin: -8px 0 18px;
+    }
+    .ad__hint code {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--orange);
+    }
+    .ad__links {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+      gap: 10px;
+    }
+    .ad__link-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .ad__link-img {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+      flex: none;
+    }
+    .ad__link-body {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+    }
+    .ad__link-title {
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 12.5px;
+      line-height: 17px;
+    }
+    .ad__link-url {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ad__link-url:hover {
+      color: var(--white);
+    }
+
     /* ---- Agenda ---- */
     .ad__agenda {
       display: flex;
