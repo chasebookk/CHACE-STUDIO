@@ -1,7 +1,16 @@
 import { env } from './env';
 
 export const OWNER_EMAIL = 'bookings@chace.studio';
-const FROM = 'CHACE STUDIOS <bookings@chace.studio>';
+
+/**
+ * Sender address. Resend rejects any From on an unverified domain, so until
+ * chace.studio is verified set EMAIL_FROM to Resend's test sender
+ * ("CHACE STUDIOS <onboarding@resend.dev>"). Replies always go to the real
+ * inbox regardless, via reply_to. Remove EMAIL_FROM once DNS is verified.
+ */
+function fromAddress(): string {
+  return env('EMAIL_FROM') ?? `CHACE STUDIOS <${OWNER_EMAIL}>`;
+}
 
 export interface Attachment {
   filename: string;
@@ -33,8 +42,9 @@ export async function sendEmail(
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: FROM,
+        from: fromAddress(),
         to: [to],
+        reply_to: OWNER_EMAIL,
         subject,
         html,
         ...(attachments.length
