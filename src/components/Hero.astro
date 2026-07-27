@@ -1,13 +1,33 @@
 ---
+// ---- Slideshow timings (tune these) ----
+const HOLD_MS = 3000; // how long each image stays
+const FADE_MS = 600; // crossfade duration
+
+const SLIDE_COUNT = 22;
+const slides = Array.from(
+  { length: SLIDE_COUNT },
+  (_, i) => `/assets/img/hero/hero-${String(i + 1).padStart(2, '0')}.jpg`
+);
+// Slide 1 is fixed so the first paint (and the LCP image) is always the same;
+// the rest are shuffled client-side on each load.
+const [firstSlide, ...restSlides] = slides;
 ---
 
-<section class="hero">
-  <img
-    class="hero__bg"
-    src="/assets/img/portfolio/portraits/portraits-03.jpg"
-    alt=""
-    fetchpriority="high"
-  />
+<section class="hero" style={`--fade-ms:${FADE_MS}ms`}>
+  <div class="hero__bgs">
+    <!-- Layer A holds the fixed opening image; layer B is filled in by JS.
+         The two alternate opacity so there is never a hard cut. -->
+    <img
+      class="hero__bg is-front"
+      id="hero-bg-a"
+      src={firstSlide}
+      alt=""
+      aria-hidden="true"
+      fetchpriority="high"
+      decoding="async"
+    />
+    <img class="hero__bg" id="hero-bg-b" alt="" aria-hidden="true" decoding="async" />
+  </div>
   <div class="hero__overlay"></div>
 
   <p class="hero__eyebrow eyebrow">Photography. Video. Podcast. Live Production.</p>
@@ -32,14 +52,26 @@
     overflow: hidden;
   }
 
+  /* Wrapper carries the dimming so the layers underneath can animate
+     cleanly between opacity 0 and 1 without fighting it. */
+  .hero__bgs {
+    position: absolute;
+    inset: 0;
+    opacity: 0.35;
+  }
+
   .hero__bg {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center 30%;
-    opacity: 0.35;
+    object-position: center;
+    opacity: 0;
+    transition: opacity var(--fade-ms, 600ms) ease-in-out;
+  }
+  .hero__bg.is-front {
+    opacity: 1;
   }
 
   .hero__overlay {
@@ -135,9 +167,120 @@
       white-space: normal;
       width: 100%;
       padding: 0 var(--pad);
+      font-size: 10px;
+      letter-spacing: 1.6px;
+    }
+    /* Touch devices get no cursor-follow, so a centred orb would sit on the
+       wordmark permanently. Park it below the title instead. */
+    .hero__badge {
+      width: 96px;
+      height: 96px;
+      top: auto;
+      bottom: 104px;
+      transform: translateX(-50%) scale(var(--bs, 1));
+    }
+  }
+
+  /* No rotation at all under reduced motion — the first image simply stays. */
+  @media (prefers-reduced-motion: reduce) {
+    .hero__bg {
+      transition: none;
     }
   }
 </style>
+
+<script define:vars={{ HOLD_MS, FADE_MS, restSlides }}>
+  (() => {
+    const a = document.getElementById('hero-bg-a');
+    const b = document.getElementById('hero-bg-b');
+    if (!a || !b) return;
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Reduced motion: leave the fixed first image in place, rotate nothing.
+    if (reduceMotion || restSlides.length === 0) return;
+
+    // Fisher–Yates over everything except the fixed opening slide.
+    const queue = restSlides.slice();
+    for (let i = queue.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [queue[i], queue[j]] = [queue[j], queue[i]];
+    }
+
+    let layers = [a, b];
+    let front = 0;
+    let cursor = 0;
+    let timer = null;
+    let running = false;
+
+    const fetchImage = (src) =>
+      new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+
+    const schedule = (delay) => {
+      clearTimeout(timer);
+      timer = setTimeout(advance, delay);
+    };
+
+    async function advance() {
+      if (document.hidden) {
+        running = false;
+        return;
+      }
+      const src = queue[cursor];
+      cursor = (cursor + 1) % queue.length;
+
+      try {
+        // Only swap once the bytes are in — otherwise the incoming layer
+        // fades up empty and flashes the background through.
+        await fetchImage(src);
+        const back = layers[1 - front];
+        back.src = src;
+        if (back.decode) {
+          try {
+            await back.decode();
+          } catch {
+            /* decode is best-effort */
+          }
+        }
+        back.classList.add('is-front');
+        layers[front].classList.remove('is-front');
+        front = 1 - front;
+      } catch {
+        /* skip a missing image and keep the show going */
+      }
+
+      // Preload the next one during this image's hold.
+      fetchImage(queue[cursor]).catch(() => {});
+      schedule(HOLD_MS + FADE_MS);
+    }
+
+    // Don't start until the second image is genuinely available, so the
+    // first transition is a real crossfade rather than a stall.
+    fetchImage(queue[0])
+      .then(() => {
+        running = true;
+        schedule(HOLD_MS);
+      })
+      .catch(() => {
+        /* leave the fixed first image up */
+      });
+
+    // Save battery while the tab is in the background.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearTimeout(timer);
+        running = false;
+      } else if (!running) {
+        running = true;
+        schedule(HOLD_MS);
+      }
+    });
+  })();
+</script>
 
 <script>
   const hero = document.querySelector<HTMLElement>('.hero');
