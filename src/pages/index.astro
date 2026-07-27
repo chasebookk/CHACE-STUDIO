@@ -2,20 +2,25 @@
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Hero from '../components/Hero.astro';
-import Studio from '../components/Studio.astro';
-import Work from '../components/Work.astro';
-import Capabilities from '../components/Capabilities.astro';
+import WhatWeDo from '../components/WhatWeDo.astro';
+import WorkRows from '../components/WorkRows.astro';
+import StudioBlock from '../components/StudioBlock.astro';
+import Business from '../components/Business.astro';
 import CTA from '../components/CTA.astro';
 import Footer from '../components/Footer.astro';
 ---
 
-<Base>
+<Base
+  title="Photography Studio Leicester | CHACE STUDIOS"
+  description="CHACE STUDIOS is a photography & media studio in Leicester — portraits, weddings, events, video and podcast production. Book a shoot in minutes."
+>
   <Header />
   <main>
     <Hero />
-    <Studio />
-    <Work />
-    <Capabilities />
+    <WhatWeDo />
+    <WorkRows />
+    <StudioBlock />
+    <Business />
     <CTA />
   </main>
   <Footer />

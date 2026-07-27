@@ -1,31 +1,48 @@
 ---
+import { EMAIL, INSTAGRAM, ADDRESS, MAPS_URL } from '../data/portfolio';
+
+const year = new Date().getFullYear();
 ---
 
 <footer class="footer">
   <div class="footer__divider"></div>
 
-  <div class="footer__left">
-    <span class="footer__brand">CHACE STUDIOS</span>
-    <span class="footer__sep">|</span>
-    <span class="footer__location">LEICESTER, UK</span>
+  <div class="footer__top">
+    <div class="footer__block footer__block--mail">
+      <p class="eyebrow footer__eyebrow">— Start a conversation</p>
+      <a href={`mailto:${EMAIL}`} class="display footer__mail">{EMAIL}</a>
+      <p class="footer__note">Tell us the shoot, the date and the vision — we'll confirm your slot.</p>
+    </div>
+
+    <div class="footer__block">
+      <p class="eyebrow footer__eyebrow">— Visit</p>
+      <p class="footer__text">CHACE STUDIOS<br />{ADDRESS}</p>
+      <a href={MAPS_URL} target="_blank" rel="noopener" class="footer__link">Get directions ↗</a>
+    </div>
+
+    <div class="footer__block">
+      <p class="eyebrow footer__eyebrow">— Follow</p>
+      <a href={INSTAGRAM} target="_blank" rel="noopener" class="footer__link">Instagram @chacestudios ↗</a>
+      <nav class="footer__nav" aria-label="Footer">
+        <a href="/" class="footer__link">Home</a>
+        <a href="/portfolio" class="footer__link">Portfolio</a>
+        <a href="/packages" class="footer__link">Packages</a>
+      </nav>
+    </div>
   </div>
 
-  <div class="footer__right">
-    <a href="#" class="footer__link">CONTACT</a>
-    <a href="#" class="footer__link">INSTAGRAM ↗</a>
+  <div class="footer__bottom">
+    <span class="footer__legal">© {year} CHACE STUDIOS · Leicester, UK</span>
+    <span class="footer__legal">Photography · Video · Podcast</span>
   </div>
 </footer>
 
 <style>
   .footer {
     position: relative;
-    height: 90px;
     border-top: 1px solid var(--line);
     background: var(--bg);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 var(--pad);
+    padding: 72px var(--pad) 32px;
   }
 
   .footer__divider {
@@ -34,54 +51,99 @@
     height: 1px;
     background: linear-gradient(
       to right,
-      rgba(255, 25, 9, 0) 0%,
+      rgba(255, 166, 0, 0) 0%,
       var(--red) 50%,
-      rgba(255, 25, 9, 0) 100%
+      rgba(132, 2, 2, 0) 100%
     );
   }
 
-  .footer__left {
-    display: flex;
-    align-items: center;
-    gap: 16px;
+  .footer__top {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr;
+    gap: 48px;
+    margin-bottom: 64px;
   }
 
-  .footer__brand {
-    font-family: var(--font-body);
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 2.4px;
-    color: var(--white);
+  .footer__eyebrow {
+    margin: 0 0 20px;
   }
 
-  .footer__sep {
-    font-size: 16px;
-    color: var(--line-strong);
+  .footer__mail {
+    display: inline-block;
+    font-size: clamp(22px, 3vw, 40px);
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+    text-transform: lowercase;
+    background: var(--grad-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    transition: filter 0.25s ease;
+  }
+  .footer__mail:hover {
+    filter: brightness(1.15);
   }
 
-  .footer__location {
-    font-family: var(--font-body);
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 2.4px;
-    color: var(--text-60);
+  .footer__note {
+    font-size: 14px;
+    line-height: 22px;
+    color: var(--text-50);
+    max-width: 380px;
+    margin: 16px 0 0;
   }
 
-  .footer__right {
-    display: flex;
-    align-items: center;
-    gap: 40px;
+  .footer__text {
+    font-size: 14px;
+    line-height: 24px;
+    color: var(--text-70);
+    margin: 0 0 12px;
   }
 
   .footer__link {
+    display: block;
+    width: fit-content;
     font-family: var(--font-body);
     font-weight: 700;
     font-size: 12px;
     letter-spacing: 2.4px;
+    text-transform: uppercase;
     color: var(--text-60);
     transition: color 0.2s ease;
+    margin-bottom: 10px;
   }
   .footer__link:hover {
     color: var(--white);
+  }
+
+  .footer__nav {
+    margin-top: 20px;
+  }
+
+  .footer__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-top: 1px solid var(--line);
+    padding-top: 24px;
+  }
+
+  .footer__legal {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.65px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  @media (max-width: 860px) {
+    .footer__top {
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+    .footer__bottom {
+      flex-direction: column;
+      align-items: flex-start;
+    }
   }
 </style>

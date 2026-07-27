@@ -1,0 +1,159 @@
+---
+import Carousel from './Carousel.astro';
+import { images } from '../data/portfolio';
+
+const rows = [
+  {
+    label: 'Portraits & Headshots',
+    href: '/portfolio#portraits',
+    cards: [
+      ...images('portraits', 5).map((src) => ({ src, chip: 'Portraits', href: '/portfolio#portraits' })),
+      ...images('headshots', 3).map((src) => ({ src, chip: 'Headshots', href: '/portfolio#headshots' })),
+    ],
+  },
+  {
+    label: 'Weddings & Events',
+    href: '/portfolio#weddings',
+    cards: [
+      ...images('weddings', 2).map((src) => ({ src, chip: 'Weddings', href: '/portfolio#weddings' })),
+      ...images('pre-wedding', 2).map((src) => ({ src, chip: 'Pre-Wedding', href: '/portfolio#pre-wedding' })),
+      ...images('events', 4).map((src) => ({ src, chip: 'Events', href: '/portfolio#events' })),
+    ],
+  },
+  {
+    label: 'Family, Baby & Graduation',
+    href: '/portfolio#family',
+    cards: [
+      ...images('family', 2).map((src) => ({ src, chip: 'Family', href: '/portfolio#family' })),
+      ...images('baby-shoots', 2).map((src) => ({ src, chip: 'Baby', href: '/portfolio#baby-shoots' })),
+      ...images('graduation', 4).map((src) => ({ src, chip: 'Graduation', href: '/portfolio#graduation' })),
+    ],
+  },
+];
+---
+
+<section class="work section">
+  <div class="work__head">
+    <div>
+      <p class="eyebrow work__eyebrow reveal">— Selected work</p>
+      <h2 class="display work__title reveal">Selected Frames</h2>
+    </div>
+    <a href="/portfolio" class="eyebrow work__archive reveal">Full portfolio ↗</a>
+  </div>
+
+  {rows.map((row) => (
+    <div class="work__row reveal">
+      <Carousel label={row.label} href={row.href}>
+        {row.cards.map((c, i) => (
+          <a href={c.href} class="wcard">
+            <div class="wcard__img-wrap">
+              <img
+                class="wcard__img"
+                src={c.src}
+                alt={`${c.chip} — CHACE STUDIOS`}
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <div class="wcard__meta">
+              <span class="wcard__label">{String(i + 1).padStart(2, '0')}</span>
+              <span class="wcard__chip">{c.chip}</span>
+            </div>
+          </a>
+        ))}
+      </Carousel>
+    </div>
+  ))}
+</section>
+
+<style>
+  .work {
+    padding: 110px 0;
+  }
+
+  .work__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 var(--pad);
+    margin-bottom: 48px;
+  }
+
+  .work__eyebrow {
+    margin: 0 0 28px;
+  }
+
+  .work__title {
+    font-size: clamp(34px, 5vw, 48px);
+    line-height: 1;
+    letter-spacing: -0.05em;
+    margin: 0;
+  }
+
+  .work__archive {
+    transition: color 0.2s ease;
+  }
+  .work__archive:hover {
+    color: var(--white);
+  }
+
+  .work__row {
+    margin-bottom: 56px;
+  }
+  .work__row:last-child {
+    margin-bottom: 0;
+  }
+
+  .wcard {
+    width: min(300px, 72vw);
+    display: block;
+    transition: transform 0.3s ease;
+  }
+  .wcard:hover {
+    transform: translateY(-6px);
+  }
+
+  .wcard__img-wrap {
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--card);
+  }
+
+  .wcard__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+  .wcard:hover .wcard__img {
+    transform: scale(1.04);
+  }
+
+  .wcard__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+  }
+
+  .wcard__label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2.2px;
+    color: var(--muted);
+  }
+
+  .wcard__chip {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--white);
+    border: 1px solid var(--line-strong);
+    border-radius: 9999px;
+    padding: 5px 12px;
+  }
+</style>

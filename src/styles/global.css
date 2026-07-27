@@ -2,7 +2,9 @@
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/jetbrains-mono';
 
-/* ---- Design tokens (from Figma: CHACE STUDIOS · 1920w light) ---- */
+/* ---- Design tokens ----
+   Dark cinematic base + white "rate card" sections.
+   Accent: orange→red gradient family from the CHACE rate cards. */
 :root {
   --bg: #000000;
   --card: #050505;
@@ -13,10 +15,18 @@
   --muted: #a0a0a0;
   --red: #ff1909;
   --red-deep: #840202;
+  --orange: #ffa600;
   --line: rgba(255, 255, 255, 0.05);
   --line-strong: rgba(255, 255, 255, 0.2);
 
+  /* Light ("rate card") section tokens */
+  --ink: #0a0a0a;
+  --ink-60: rgba(10, 10, 10, 0.6);
+  --ink-50: rgba(10, 10, 10, 0.5);
+  --line-dark: rgba(0, 0, 0, 0.1);
+
   --grad-red: linear-gradient(135deg, var(--red-deep) 0%, var(--red) 100%);
+  --grad-accent: linear-gradient(135deg, #ffa600 0%, #ff1909 55%, #840202 100%);
   --grad-btn: linear-gradient(135deg, #000000 0%, var(--red-deep) 50%, var(--red) 100%);
 
   --font-display: 'Archivo Black', 'Archivo', sans-serif;
@@ -24,6 +34,13 @@
   --font-body: 'Inter Variable', 'Inter', sans-serif;
 
   --pad: 40px;
+  --radius: 20px;
+}
+
+@media (max-width: 720px) {
+  :root {
+    --pad: 20px;
+  }
 }
 
 *,
@@ -93,6 +110,55 @@ a {
   padding: 0 var(--pad);
 }
 
+/* White "rate card" section shell */
+.sec-light {
+  background: var(--white);
+  color: var(--ink);
+  padding: 0 var(--pad);
+}
+.sec-light .display {
+  color: var(--ink);
+}
+.sec-light .eyebrow {
+  color: rgba(10, 10, 10, 0.45);
+}
+
+/* Gradient accent tile (rate-card icon squares / branded panels) */
+.tile-accent {
+  background: var(--grad-accent);
+  border-radius: 14px;
+}
+
+/* Black rounded info panel with » bullets (rate-card language) */
+.panel-dark {
+  background: var(--ink);
+  color: var(--white);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+}
+.panel-dark ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.panel-dark li {
+  position: relative;
+  padding-left: 22px;
+  font-size: 13.5px;
+  line-height: 20px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.panel-dark li::before {
+  content: '»';
+  position: absolute;
+  left: 0;
+  color: var(--orange);
+  font-weight: 700;
+}
+
 /* Buttons / links */
 .btn {
   display: inline-flex;
@@ -109,7 +175,8 @@ a {
   color: var(--white);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: opacity 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+  transition: opacity 0.25s ease, filter 0.25s ease, background 0.25s ease,
+    border-color 0.25s ease;
 }
 
 .btn--outline {
@@ -120,13 +187,122 @@ a {
 }
 
 .btn--fill {
-  background: var(--grad-btn);
+  background: var(--grad-accent);
 }
 .btn--fill:hover {
-  opacity: 0.9;
+  filter: brightness(1.12);
+}
+
+/* Outline button for light sections */
+.btn--ink {
+  color: var(--ink);
+  border-color: rgba(0, 0, 0, 0.25);
+}
+.btn--ink:hover {
+  border-color: var(--ink);
 }
 
 .btn__icon {
   width: 14px;
   height: 14px;
+}
+
+/* ---- Carousel base (scroll-snap rows) ---- */
+.carousel {
+  position: relative;
+}
+
+.carousel__track {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-left: var(--pad);
+  padding: 6px var(--pad) 6px;
+  scrollbar-width: none;
+  cursor: grab;
+}
+.carousel__track::-webkit-scrollbar {
+  display: none;
+}
+.carousel__track.is-dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  scroll-behavior: auto;
+}
+.carousel__track.is-dragging * {
+  pointer-events: none;
+}
+.carousel__track > * {
+  scroll-snap-align: start;
+  flex: none;
+}
+
+.carousel__arrows {
+  display: flex;
+  gap: 8px;
+}
+
+.carousel__arrow {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 9999px;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+}
+.carousel__arrow:hover {
+  border-color: currentColor;
+}
+.carousel__arrow:disabled {
+  opacity: 0.25;
+  cursor: default;
+  border-color: var(--line-strong);
+}
+.sec-light .carousel__arrow {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 720px) {
+  .carousel__arrows {
+    display: none;
+  }
+}
+
+/* ---- Scroll reveal ---- */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---- Reduced motion: disable reveals, hovers stay subtle ---- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

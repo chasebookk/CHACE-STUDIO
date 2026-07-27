@@ -1,0 +1,65 @@
+---
+interface Props {
+  label?: string;
+  href?: string;
+  id?: string;
+}
+
+const { label, href, id } = Astro.props;
+---
+
+<div class="carousel" data-carousel id={id}>
+  <div class="carousel__head">
+    {label && (
+      href
+        ? <a href={href} class="display carousel__label carousel__label--link">{label} <span class="carousel__label-arrow">→</span></a>
+        : <h3 class="display carousel__label">{label}</h3>
+    )}
+    <div class="carousel__arrows">
+      <button type="button" class="carousel__arrow" data-carousel-prev aria-label={`Scroll ${label ?? 'row'} back`}>←</button>
+      <button type="button" class="carousel__arrow" data-carousel-next aria-label={`Scroll ${label ?? 'row'} forward`}>→</button>
+    </div>
+  </div>
+
+  <div class="carousel__track">
+    <slot />
+  </div>
+</div>
+
+<style>
+  .carousel__head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 var(--pad);
+    margin-bottom: 18px;
+  }
+
+  .carousel__head :global(.carousel__arrows) {
+    margin-left: auto;
+  }
+
+  .carousel__label {
+    font-size: 24px;
+    line-height: 30px;
+    letter-spacing: -1.2px;
+    margin: 0;
+  }
+
+  .carousel__label--link .carousel__label-arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+  }
+  .carousel__label--link:hover .carousel__label-arrow {
+    transform: translateX(4px);
+  }
+
+  @media (max-width: 720px) {
+    .carousel__label {
+      font-size: 19px;
+      line-height: 24px;
+      letter-spacing: -0.8px;
+    }
+  }
+</style>

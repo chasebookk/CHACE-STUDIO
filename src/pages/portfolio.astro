@@ -1,0 +1,131 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import Carousel from '../components/Carousel.astro';
+import { images } from '../data/portfolio';
+
+const rows = [
+  { id: 'portraits', label: 'Individual Portraits', imgs: images('portraits') },
+  { id: 'headshots', label: 'Headshots', imgs: images('headshots') },
+  { id: 'events', label: 'Events', imgs: [...images('events'), ...images('bridal-shower')] },
+  { id: 'weddings', label: 'Weddings & Proposals', imgs: images('weddings') },
+  { id: 'pre-wedding', label: 'Pre-Wedding', imgs: images('pre-wedding') },
+  { id: 'family', label: 'Family', imgs: images('family') },
+  { id: 'baby-shoots', label: 'Baby Shoots', imgs: images('baby-shoots') },
+  { id: 'graduation', label: 'Graduation', imgs: images('graduation') },
+  { id: 'fashion', label: 'Fashion & Brand Campaigns', imgs: images('fashion') },
+];
+---
+
+<Base
+  title="Portfolio | CHACE STUDIOS"
+  description="Selected photography from CHACE STUDIOS Leicester — portraits, headshots, weddings, events, family, graduation and fashion campaigns."
+>
+  <Header />
+
+  <main>
+    <section class="pf-hero">
+      <p class="eyebrow reveal">— Portfolio</p>
+      <h1 class="display pf-hero__title reveal">
+        Every kind<br />of <span class="grad-text">frame</span>.
+      </h1>
+      <p class="pf-hero__sub reveal">
+        Swipe through the work. When something feels right,
+        <a href="/packages">book the package that fits</a>.
+      </p>
+    </section>
+
+    {rows.map((row, rowIndex) => (
+      <section class="pf-row reveal" id={row.id}>
+        <Carousel label={row.label}>
+          {row.imgs.map((src, i) => (
+            <figure class="pf-card">
+              <img
+                class="pf-card__img"
+                src={src}
+                alt={`${row.label} ${i + 1} — CHACE STUDIOS`}
+                loading={rowIndex === 0 && i < 3 ? 'eager' : 'lazy'}
+                decoding="async"
+              />
+              <figcaption class="pf-card__label">
+                {String(i + 1).padStart(2, '0')} / {row.label}
+              </figcaption>
+            </figure>
+          ))}
+        </Carousel>
+      </section>
+    ))}
+
+    <section class="pf-cta">
+      <a href="/packages" class="btn btn--fill">Book a Shoot</a>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  .pf-hero {
+    padding: 110px var(--pad) 72px;
+  }
+  .pf-hero .eyebrow {
+    margin: 0 0 36px;
+  }
+  .pf-hero__title {
+    font-size: clamp(52px, 9vw, 110px);
+    line-height: 0.95;
+    letter-spacing: -0.05em;
+    margin: 0 0 28px;
+  }
+  .pf-hero__sub {
+    font-size: 17px;
+    line-height: 28px;
+    color: var(--text-60);
+    max-width: 520px;
+    margin: 0;
+  }
+  .pf-hero__sub a {
+    color: var(--white);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .pf-row {
+    padding: 28px 0;
+    scroll-margin-top: 90px;
+  }
+
+  .pf-card {
+    width: min(300px, 72vw);
+    margin: 0;
+    transition: transform 0.3s ease;
+  }
+  .pf-card:hover {
+    transform: translateY(-6px);
+  }
+
+  .pf-card__img {
+    aspect-ratio: 4 / 5;
+    width: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+    background: var(--card);
+    transition: transform 0.3s ease;
+  }
+
+  .pf-card__label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.65px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  .pf-cta {
+    display: flex;
+    justify-content: center;
+    padding: 72px var(--pad) 110px;
+  }
+</style>

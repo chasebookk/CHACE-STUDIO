@@ -1,36 +1,66 @@
 ---
+const links = [
+  { label: 'Home', href: '/' },
+  { label: 'Portfolio', href: '/portfolio' },
+  { label: 'Packages', href: '/packages' },
+];
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 ---
 
 <header class="header">
   <a href="/" class="header__logo">CHACE</a>
 
-  <nav class="header__nav">
-    <a href="/packages" class="header__book">Book</a>
+  <nav class="header__nav" aria-label="Main">
+    {links.map((l) => (
+      <a
+        href={l.href}
+        class:list={['header__link', { 'header__link--active': path === l.href }]}
+      >
+        {l.label}
+      </a>
+    ))}
+    <a href="/packages#book" class="btn btn--fill header__cta">Book Now</a>
 
-    <button type="button" class="header__menu" aria-label="Toggle menu">
+    <button type="button" class="header__menu" aria-label="Open menu" aria-expanded="false" data-menu-toggle>
       <span class="header__menu-label">Menu</span>
       <img src="/assets/icons/menu1.svg" alt="" width="22" height="22" />
     </button>
   </nav>
 </header>
 
+<div class="overlay" data-menu-overlay hidden>
+  <button type="button" class="overlay__close" aria-label="Close menu" data-menu-close>✕</button>
+  <nav class="overlay__nav" aria-label="Mobile">
+    {links.map((l, i) => (
+      <a href={l.href} class="display overlay__link" style={`--i:${i}`}>{l.label}</a>
+    ))}
+    <a href="/packages#book" class="btn btn--fill overlay__cta" style={`--i:${links.length}`}>Book Now</a>
+  </nav>
+  <p class="overlay__foot">bookings@chace.studio · Leicester LE1 6BT</p>
+</div>
+
 <style>
   .header {
-    position: absolute;
-    inset: 0 0 auto 0;
+    position: sticky;
+    top: 0;
     z-index: 50;
-    height: 84px;
+    height: 72px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 var(--pad);
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
   }
 
   .header__logo {
     font-family: var(--font-display);
     font-weight: 400;
-    font-size: 30px;
-    letter-spacing: -1.5px;
+    font-size: 26px;
+    letter-spacing: -1.3px;
     text-transform: uppercase;
     color: var(--white);
   }
@@ -38,10 +68,10 @@
   .header__nav {
     display: flex;
     align-items: center;
-    gap: 44px;
+    gap: 36px;
   }
 
-  .header__book {
+  .header__link {
     font-family: var(--font-body);
     font-weight: 700;
     font-size: 11px;
@@ -50,12 +80,20 @@
     color: var(--text-70);
     transition: color 0.2s ease;
   }
-  .header__book:hover {
+  .header__link:hover,
+  .header__link--active {
     color: var(--white);
   }
 
+  .header__cta {
+    height: 40px;
+    padding: 0 20px;
+    font-size: 11px;
+    letter-spacing: 2.2px;
+  }
+
   .header__menu {
-    display: inline-flex;
+    display: none;
     align-items: center;
     gap: 10px;
     background: none;
@@ -71,4 +109,121 @@
     text-transform: uppercase;
     color: var(--muted);
   }
+
+  /* ---- Mobile overlay ---- */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.96);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .overlay[hidden] {
+    display: none;
+  }
+
+  .overlay__close {
+    position: absolute;
+    top: 22px;
+    right: var(--pad);
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line-strong);
+    border-radius: 9999px;
+    background: none;
+    color: var(--white);
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .overlay__nav {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+
+  .overlay__link {
+    font-size: 44px;
+    line-height: 1;
+    letter-spacing: -2.2px;
+    color: var(--white);
+    opacity: 0;
+    transform: translateY(16px);
+    animation: overlay-in 0.4s ease-out forwards;
+    animation-delay: calc(var(--i) * 70ms);
+  }
+
+  .overlay__cta {
+    margin-top: 12px;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: overlay-in 0.4s ease-out forwards;
+    animation-delay: calc(var(--i) * 70ms);
+  }
+
+  .overlay__foot {
+    position: absolute;
+    bottom: 32px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin: 0;
+    padding: 0 var(--pad);
+    text-align: center;
+  }
+
+  @keyframes overlay-in {
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .overlay__link,
+    .overlay__cta {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (max-width: 860px) {
+    .header__link,
+    .header__cta {
+      display: none;
+    }
+    .header__menu {
+      display: inline-flex;
+    }
+  }
 </style>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
+  const overlay = document.querySelector<HTMLElement>('[data-menu-overlay]');
+  const close = document.querySelector<HTMLButtonElement>('[data-menu-close]');
+
+  const setOpen = (open: boolean) => {
+    if (!overlay || !toggle) return;
+    overlay.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    document.body.style.overflow = open ? 'hidden' : '';
+  };
+
+  toggle?.addEventListener('click', () => setOpen(true));
+  close?.addEventListener('click', () => setOpen(false));
+  overlay?.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('a')) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setOpen(false);
+  });
+</script>

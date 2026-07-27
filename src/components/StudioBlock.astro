@@ -1,0 +1,139 @@
+---
+import { ADDRESS, MAPS_URL } from '../data/portfolio';
+---
+
+<section class="studio section">
+  <div class="studio__grid">
+    <div class="studio__copy reveal">
+      <p class="eyebrow studio__eyebrow">— The studio</p>
+      <h2 class="display studio__heading">
+        Your space.<br />
+        Our <span class="grad-text">light</span>.
+      </h2>
+      <p class="studio__body">
+        A city-centre studio built for portraits, content days and podcast
+        recording — lighting, backdrops and an engineer on hand when you need one.
+      </p>
+      <a href={MAPS_URL} target="_blank" rel="noopener" class="studio__addr">
+        📍 {ADDRESS}
+      </a>
+      <a href="/packages" class="btn btn--fill studio__cta">Hire the Studio</a>
+    </div>
+
+    <div class="studio__rates reveal" style="--reveal-delay:120ms">
+      <div class="panel-dark studio__panel">
+        <p class="studio__panel-title display">Studio Hire</p>
+        <p class="studio__price"><span class="display studio__amount">£35</span> / hour</p>
+        <p class="studio__price"><span class="display studio__amount">£60</span> / 2 hours</p>
+        <ul>
+          <li>Lighting & backdrops included</li>
+          <li>City-centre location</li>
+        </ul>
+      </div>
+
+      <div class="panel-dark studio__panel studio__panel--accent">
+        <p class="studio__panel-title display">Podcast &amp; Live Broadcast Production</p>
+        <p class="studio__price"><span class="display studio__amount">£200</span> / 1-hour session</p>
+        <ul>
+          <li>1–3 speakers, in-studio</li>
+          <li>Full production included</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .studio {
+    padding-top: 110px;
+    padding-bottom: 110px;
+  }
+
+  .studio__grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 64px;
+    align-items: center;
+  }
+
+  .studio__eyebrow {
+    margin: 0 0 32px;
+  }
+
+  .studio__heading {
+    font-size: clamp(40px, 6vw, 72px);
+    line-height: 1;
+    letter-spacing: -0.05em;
+    margin: 0 0 28px;
+  }
+
+  .studio__body {
+    font-size: 17px;
+    line-height: 28px;
+    color: var(--text-60);
+    max-width: 520px;
+    margin: 0 0 24px;
+  }
+
+  .studio__addr {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 1.8px;
+    color: var(--text-70);
+    margin-bottom: 36px;
+    transition: color 0.2s ease;
+  }
+  .studio__addr:hover {
+    color: var(--white);
+  }
+
+  .studio__rates {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .studio__panel {
+    border: 1px solid var(--line-strong);
+  }
+
+  .studio__panel--accent {
+    background: var(--grad-accent);
+  }
+  .studio__panel--accent li::before {
+    color: var(--white);
+  }
+  .studio__panel--accent li {
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .studio__panel-title {
+    font-size: 15px;
+    letter-spacing: 1px;
+    margin: 0 0 14px;
+  }
+
+  .studio__price {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 8px;
+  }
+
+  .studio__amount {
+    font-size: 34px;
+    letter-spacing: -1.5px;
+    margin-right: 4px;
+  }
+
+  .studio__panel ul {
+    margin-top: 14px;
+  }
+
+  @media (max-width: 860px) {
+    .studio__grid {
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+  }
+</style>

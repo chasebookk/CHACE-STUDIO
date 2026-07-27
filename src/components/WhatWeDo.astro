@@ -1,0 +1,119 @@
+---
+const services = [
+  {
+    title: 'Photography',
+    line: 'Portraits, weddings, events, family & graduation — shot and graded in-house.',
+    glyph: '01',
+  },
+  {
+    title: 'Video & Campaigns',
+    line: 'Brand films, event coverage and fashion campaigns from concept to final cut.',
+    glyph: '02',
+  },
+  {
+    title: 'Podcast & Studio Hire',
+    line: 'Record in our Leicester studio — full production or hire the space by the hour.',
+    glyph: '03',
+  },
+];
+---
+
+<section class="wwd sec-light">
+  <p class="eyebrow wwd__eyebrow reveal">— What we do</p>
+  <h2 class="display wwd__title reveal">One studio.<br />Every frame.</h2>
+
+  <div class="wwd__grid">
+    {services.map((s, i) => (
+      <a href="/packages" class="wwd__card reveal" style={`--reveal-delay:${i * 100}ms`}>
+        <div class="tile-accent wwd__tile">
+          <span class="display wwd__glyph">{s.glyph}</span>
+        </div>
+        <h3 class="display wwd__name">{s.title}</h3>
+        <p class="wwd__line">{s.line}</p>
+        <span class="wwd__go">See packages →</span>
+      </a>
+    ))}
+  </div>
+</section>
+
+<style>
+  .wwd {
+    padding-top: 110px;
+    padding-bottom: 110px;
+  }
+
+  .wwd__eyebrow {
+    margin: 0 0 28px;
+  }
+
+  .wwd__title {
+    font-size: clamp(40px, 6vw, 72px);
+    line-height: 1;
+    letter-spacing: -0.05em;
+    margin: 0 0 56px;
+  }
+
+  .wwd__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .wwd__card {
+    display: flex;
+    flex-direction: column;
+    padding: 28px;
+    border: 1px solid var(--line-dark);
+    border-radius: var(--radius);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .wwd__card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+  }
+
+  .wwd__tile {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 26px;
+  }
+
+  .wwd__glyph {
+    color: var(--white);
+    font-size: 20px;
+    letter-spacing: -1px;
+  }
+
+  .wwd__name {
+    font-size: 21px;
+    line-height: 27px;
+    letter-spacing: -1px;
+    margin: 0 0 12px;
+  }
+
+  .wwd__line {
+    font-size: 14.5px;
+    line-height: 23px;
+    color: var(--ink-60);
+    margin: 0 0 22px;
+  }
+
+  .wwd__go {
+    margin-top: auto;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  @media (max-width: 860px) {
+    .wwd__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

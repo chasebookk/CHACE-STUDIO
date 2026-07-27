@@ -1,0 +1,55 @@
+---
+import { EMAIL } from '../data/portfolio';
+---
+
+<section class="biz sec-light">
+  <p class="eyebrow biz__eyebrow reveal">— For business</p>
+  <h2 class="display biz__heading reveal">
+    Don't hire a freelancer.<br />
+    <span class="biz__grad">Contract a studio.</span>
+  </h2>
+  <p class="biz__body reveal">
+    Schools, universities, estate agents and brands — one team for photography,
+    video and podcast, on contract or per project.
+  </p>
+  <a
+    href={`mailto:${EMAIL}?subject=Business%20enquiry`}
+    class="btn btn--fill biz__cta reveal"
+  >
+    Start a Business Enquiry
+  </a>
+</section>
+
+<style>
+  .biz {
+    padding-top: 110px;
+    padding-bottom: 110px;
+    text-align: center;
+  }
+
+  .biz__eyebrow {
+    margin: 0 0 28px;
+  }
+
+  .biz__heading {
+    font-size: clamp(36px, 6vw, 72px);
+    line-height: 1.05;
+    letter-spacing: -0.05em;
+    margin: 0 0 24px;
+  }
+
+  .biz__grad {
+    background: var(--grad-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .biz__body {
+    font-size: 17px;
+    line-height: 28px;
+    color: var(--ink-60);
+    max-width: 560px;
+    margin: 0 auto 40px;
+  }
+</style>

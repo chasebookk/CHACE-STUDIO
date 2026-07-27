@@ -5,16 +5,16 @@
   <div class="cta__glow"></div>
 
   <div class="cta__inner">
-    <h2 class="display cta__heading">
-      Ready to<br />
-      <span class="grad-text">shoot?</span>
+    <h2 class="display cta__heading reveal">
+      Ready when<br />
+      <span class="grad-text">you are.</span>
     </h2>
 
-    <p class="cta__sub">Book your session in minutes. No account needed.</p>
+    <p class="cta__sub reveal">Book your session in minutes. No account needed.</p>
 
-    <div class="cta__actions">
-      <a href="/packages" class="btn btn--fill">Book a Shoot</a>
-      <a href="/packages" class="btn btn--outline">Hire the Studio</a>
+    <div class="cta__actions reveal">
+      <a href="/packages#book" class="btn btn--fill">Book Now</a>
+      <a href="/packages" class="btn btn--outline">See Packages</a>
     </div>
   </div>
 </section>
@@ -30,13 +30,13 @@
   .cta__glow {
     position: absolute;
     inset: 0;
-    opacity: 0.1;
-    background: linear-gradient(135deg, #000000 0%, var(--red-deep) 50%, var(--red) 100%);
+    opacity: 0.12;
+    background: var(--grad-accent);
   }
 
   .cta__inner {
     position: relative;
-    height: 719px;
+    padding: 140px 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -45,9 +45,9 @@
   }
 
   .cta__heading {
-    font-size: 96px;
-    line-height: 96px;
-    letter-spacing: -4.8px;
+    font-size: clamp(52px, 9vw, 96px);
+    line-height: 1;
+    letter-spacing: -0.05em;
     margin: 0 0 34px;
   }
 
@@ -60,6 +60,8 @@
 
   .cta__actions {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 16px;
   }
 </style>

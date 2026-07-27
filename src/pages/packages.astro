@@ -2,134 +2,291 @@
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import PricingCard from '../components/PricingCard.astro';
+import Carousel from '../components/Carousel.astro';
+import RateCard from '../components/RateCard.astro';
+import { EMAIL } from '../data/portfolio';
 
-const filters = [
-  { label: 'All', value: 'all' },
-  { label: 'Photography', value: 'photography' },
-  { label: 'Video Production', value: 'video' },
-  { label: 'Podcast Studio', value: 'podcast' },
-  { label: 'Studio Hire', value: 'studio-hire' },
+// Package data mirrors PACKAGES.md (authoritative) — names, prices and copy exact.
+const groups = [
+  {
+    label: 'Portraits & People',
+    id: 'portraits-people',
+    cards: [
+      {
+        title: 'Individual Portrait',
+        image: '/assets/img/pricing/individual-portrait.jpg',
+        tagline:
+          'Studio portraits built around you. Lighting, direction and retouching that make a single frame do the work of a hundred.',
+        prices: [
+          { amount: '£170', label: '1 look · 4 edited pictures' },
+          { amount: '£300', label: '2 looks · 8 edited pictures' },
+        ],
+        bullets: [
+          "Guided posing — you don't need to know what to do with your hands",
+          'Private online gallery to choose your favourites',
+          'Further discount considered on multiple looks',
+          'Low-resolution unedited images available on request',
+        ],
+      },
+      {
+        title: 'Professional Corporate Headshots',
+        image: '/assets/img/pricing/corporate-headshots.jpg',
+        tagline:
+          'Headshots that hold up on LinkedIn, a company website and a conference banner. Clean, consistent, and shot to a brief — so an entire team matches.',
+        prices: [
+          { amount: '£150', label: '1 look · 4 retouched pictures' },
+          { amount: '£300', label: '2 looks · 8 retouched pictures' },
+        ],
+        bullets: [
+          'Wardrobe and background guidance before the session',
+          'Natural retouching — polished, still recognisably you',
+          'Delivered in web and print-ready crops',
+          'Ideal for founders, consultants, estate agents, legal and medical practices',
+        ],
+      },
+      {
+        title: 'Maternity Shoot',
+        image: '/assets/img/pricing/maternity.jpg',
+        tagline: 'A quiet, beautifully lit record of the weeks before everything changes.',
+        prices: [
+          { amount: '£170', label: 'single · 1 look · 4 edited images' },
+          { amount: '£200', label: 'couple · 1 look · 6 edited images' },
+        ],
+        bullets: [
+          "Relaxed pace — we work around how you're feeling on the day",
+          'Low-resolution unedited images available on request',
+        ],
+      },
+      {
+        title: 'Baby Shoot · Ages 1–10',
+        image: '/assets/img/pricing/baby-shoot.jpg',
+        tagline: "Patient, playful sessions for little ones. We work at their pace, not the clock's.",
+        prices: [
+          { amount: '£150', label: '1 look · 4 edited images' },
+          { amount: '£250', label: '2 looks · 8 edited images' },
+        ],
+        bullets: [
+          "Bring snacks and a spare outfit — we'll handle the rest",
+          'Discount on multiple looks',
+          'Low-resolution unedited images available on request',
+        ],
+      },
+      {
+        title: 'Family Shoot',
+        image: '/assets/img/pricing/family.jpg',
+        tagline: 'Everyone in one frame, properly lit. The picture that actually ends up on the wall.',
+        prices: [
+          { amount: '£250', label: 'per look · family of 4 · 8 pictures per look' },
+          { amount: '+£20', label: 'per additional person' },
+        ],
+        bullets: [
+          'Coordinated group and individual frames in the same session',
+          'Works for milestone birthdays, anniversaries and reunions',
+          'Discount considered on multiple looks',
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Weddings & Events',
+    id: 'weddings-events',
+    cards: [
+      {
+        title: 'Pre-Wedding & Engagement',
+        image: '/assets/img/pricing/pre-wedding-engagement.jpg',
+        tagline: 'Your story before the day itself — styled, directed, and shot in studio or on location.',
+        prices: [
+          { amount: '£200', label: '1 look · 7 images per look' },
+          { amount: '£400', label: '2 looks' },
+          { amount: '£500', label: '3 looks' },
+        ],
+        bullets: [
+          'Location scouting and outfit guidance included in planning',
+          'Low-resolution unedited images available on request',
+        ],
+      },
+      {
+        title: 'Civil Wedding',
+        image: '/assets/img/pricing/civil-wedding.jpg',
+        tagline: 'Full coverage of the ceremony and the moments either side of it.',
+        prices: [{ amount: 'From £300', label: '1 hour · within London' }],
+        bullets: [
+          '10 retouched portraits of the couple, plus all edited images',
+          'Ceremony, signing, confetti and group frames',
+          'Additional hours available — arranged in advance',
+          'Off-site and outside-London coverage quoted on request',
+        ],
+      },
+      {
+        title: 'Event Shoot',
+        image: '/assets/img/pricing/events.jpg',
+        tagline: 'Naming ceremonies, birthdays, corporate events — covered end to end, delivered fast.',
+        prices: [{ amount: 'From £300', label: '2 hours · within London' }],
+        bullets: [
+          'Includes but not limited to naming ceremonies, birthday parties and corporate events',
+          'Candid coverage plus set-piece group portraits',
+          'Delivered via a custom web gallery — shareable with every guest',
+          'Frames and USB delivery available',
+          'Further discount considered on multiple hours',
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Studio & Production',
+    id: 'studio-production',
+    cards: [
+      {
+        title: 'Studio Hire',
+        image: '/assets/img/pricing/studio-hire.jpg',
+        tagline: 'Our Leicester studio, yours by the hour. Lighting and backdrops set up and ready to shoot.',
+        prices: [
+          { amount: '£35', label: '1 hour' },
+          { amount: '£60', label: '2 hours' },
+        ],
+        bullets: [
+          'Professional lighting, backdrops and shooting space',
+          'Suitable for photographers, content creators and brands',
+          '5 Pocklingtons Walk, Leicester LE1 6BT',
+          'Longer bookings and regular-user rates available on request',
+        ],
+      },
+      {
+        title: 'Podcast & Live Broadcast Production',
+        image: '/assets/img/pricing/podcast-live-broadcast.jpg',
+        tagline:
+          'Multi-cam podcast and live broadcast production in a room built for it. Turn up, talk, walk out with the episode.',
+        prices: [
+          { amount: '£200', label: '1-hour session · 1–3 speakers' },
+          { amount: '£150', label: 'per episode · continuous/recurring package' },
+        ],
+        bullets: [
+          'Multi-camera capture and professional microphones',
+          'Multi-track audio recorded and mixed',
+          'Live streaming setup available',
+          'Recurring package keeps your release schedule consistent',
+          'Please note: we are not responsible for designing your assets such as intro cards and display graphics',
+        ],
+      },
+      {
+        title: 'Fashion & Brand Campaigns',
+        image: '/assets/img/pricing/fashion-brand.jpg',
+        tagline: 'Campaign work, priced around your brief.',
+        prices: [{ amount: 'POA', label: 'price on request' }],
+        bullets: [
+          'Arranged on timing, number of outfits, models and creative direction',
+          'Lookbooks, product campaigns, brand launches and editorial',
+          'Studio or location, crew scaled to the shoot',
+        ],
+        ctaLabel: 'Discuss your campaign',
+        ctaHref: `mailto:${EMAIL}?subject=Campaign%20enquiry`,
+      },
+    ],
+  },
 ];
 
-const packages = [
-  {
-    category: 'Photography',
-    filter: 'photography',
-    title: 'Portrait Session',
-    price: '£250',
-    unit: '2hr',
-    description: 'Cinematic individual or group portraits shot low-key with professional grading.',
-    features: ['2-hour studio session', '30+ edited images', 'Cinematic colour grade', 'Online gallery'],
-    popular: false,
-  },
-  {
-    category: 'Photography',
-    filter: 'photography',
-    title: 'Full Wedding Coverage',
-    price: '£1500',
-    unit: '10hr',
-    description: 'Start-to-finish wedding documentation — getting ready through first dance.',
-    features: ['Full-day coverage', '500+ edited images', 'Highlight film included', 'Print rights'],
-    popular: true,
-  },
-  {
-    category: 'Video Production',
-    filter: 'video',
-    title: 'Brand Story Film',
-    price: '£2000',
-    unit: '8hr',
-    description: 'A 2–3 minute cinematic brand film from concept to final cut.',
-    features: ['Concept & storyboard', 'Cinema-grade capture', 'Full post & colour grade', 'Sound design'],
-    popular: true,
-  },
-  {
-    category: 'Video Production',
-    filter: 'video',
-    title: 'Event Highlight Reel',
-    price: '£800',
-    unit: '6hr',
-    description: 'Cinematic event coverage with a punchy highlight edit.',
-    features: ['Multi-angle capture', '1-min highlight edit', 'Full raw footage', '48hr turnaround'],
-    popular: false,
-  },
-  {
-    category: 'Podcast Studio',
-    filter: 'podcast',
-    title: 'Podcast Launch Package',
-    price: '£350',
-    unit: '3hr',
-    description: 'Full podcast episode production — recording, mixing & video capture.',
-    features: ['Studio + engineer', 'Multi-cam video', 'Multi-track mixing', 'Episode publish-ready'],
-    popular: false,
-  },
-  {
-    category: 'Studio Hire',
-    filter: 'studio-hire',
-    title: 'Studio Half-Day',
-    price: '£160',
-    unit: '4hr',
-    description: 'Four hours of full studio access with lighting grid.',
-    features: ['Main studio access', 'Lighting grid included', 'Cyclorama wall', 'Basic grip kit'],
-    popular: false,
-  },
+const allPackages = groups.flatMap((g) => g.cards.map((c) => c.title));
+
+const included = [
+  'Private online gallery to select your images',
+  'Professional retouching on every selected image',
+  'Digital delivery via Google Drive or WhatsApp (events: custom web gallery, frames or USB)',
+  'Edits delivered within 4–6 working days of your selection',
+  'Full delivery 7–10 days after selection',
+  'Photobooks available on request',
+];
+
+const addons = [
+  'Express delivery — 24-hour turnaround £50 · 48-hour £35',
+  'Extra edited image — £20 each',
+  'Additional person in frame — £40 (includes one extra edited image)',
+  'Outdoor / location shoots — £45 logistics fee',
+  'Midnight sessions (from 10:00 PM) — £35',
+  'Low-resolution unedited images available on request',
+  'Booking: full payment secures a single-outfit session; multi-outfit bookings need an 80% deposit, balance due immediately after the shoot',
+  'All appointments run to time slots — lateness may attract extra charges. Extra hours are payable immediately.',
+  'Studio rental fees are payable by the client · No refunds',
+];
+
+const timeSlots = [
+  'Morning (9am–12pm)',
+  'Afternoon (12pm–4pm)',
+  'Evening (4pm–8pm)',
+  'Late (8pm–10pm)',
+  'Midnight session (from 10pm)',
 ];
 ---
 
-<Base title="Packages & Booking — CHACE STUDIOS" description="Transparent packages across photography, video, podcast and studio hire. No account needed — book in minutes.">
+<Base
+  title="Photography Packages & Prices Leicester | CHACE STUDIOS"
+  description="Transparent photography, wedding, event, studio hire and podcast packages at CHACE STUDIOS Leicester. Book in minutes — no account needed."
+>
   <Header />
 
-  <main>
-    <!-- Hero -->
-    <section class="pk-hero">
-      <p class="eyebrow">— 04 / Packages &amp; Booking</p>
-      <h1 class="display pk-hero__title">
-        Pick your<br />
-        <span class="grad-text">frame.</span>
+  <main class="pk">
+    <!-- Hero (white, rate-card) -->
+    <section class="pk-hero sec-light">
+      <p class="eyebrow reveal">— Packages &amp; Booking</p>
+      <h1 class="display pk-hero__title reveal">
+        The rate<br />
+        <span class="pk-hero__grad">card.</span>
       </h1>
-      <p class="pk-hero__sub">
-        Transparent packages across photography, video, podcast and studio hire. No
-        account needed — book in minutes.
+      <p class="pk-hero__sub reveal">
+        Transparent packages across photography, video, podcast and studio hire.
+        No account needed — book in minutes.
       </p>
     </section>
 
-    <!-- Filters -->
-    <section class="pk-filters">
-      <div class="pk-filters__row" role="tablist">
-        {filters.map((f, i) => (
-          <button
-            type="button"
-            class:list={['pk-filter', { 'pk-filter--active': i === 0 }]}
-            data-filter={f.value}
-          >
-            {f.label}
-          </button>
-        ))}
+    <!-- Package groups -->
+    {groups.map((g) => (
+      <section class="pk-group sec-light" id={g.id}>
+        <Carousel label={g.label}>
+          {g.cards.map((c) => (
+            <RateCard {...c} />
+          ))}
+        </Carousel>
+      </section>
+    ))}
+
+    <!-- Every booking includes -->
+    <section class="pk-included sec-light">
+      <div class="panel-dark pk-included__panel reveal">
+        <h2 class="display pk-included__title">Every booking includes</h2>
+        <ul>
+          {included.map((item) => (
+            <li>{item}</li>
+          ))}
+        </ul>
       </div>
     </section>
 
-    <!-- Pricing grid -->
-    <section class="pk-grid">
-      {packages.map((p) => <PricingCard {...p} />)}
+    <!-- Add-ons & good to know -->
+    <section class="pk-addons sec-light">
+      <h2 class="display pk-addons__title reveal">Add-ons &amp; good to know</h2>
+      <ul class="pk-addons__list reveal">
+        {addons.map((item) => (
+          <li>{item}</li>
+        ))}
+      </ul>
     </section>
 
     <!-- Booking form -->
-    <section id="book" class="pk-book section">
+    <section id="book" class="pk-book sec-light">
       <div class="pk-book__inner">
-        <p class="eyebrow">— Booking Request</p>
-        <h2 class="display pk-book__title">Book a Shoot</h2>
-        <p class="pk-book__sub">
-          Select a package above or fill the form below — we'll match you to the right service.
+        <p class="eyebrow reveal">— Booking request</p>
+        <h2 class="display pk-book__title reveal">Book a Shoot</h2>
+        <p class="pk-book__sub reveal">
+          Fill the form and your email app will open — hit send and we'll confirm your slot.
         </p>
 
-        <form class="pk-form" novalidate>
+        <form class="pk-form reveal" data-booking-form novalidate>
           <div class="pk-field">
-            <label class="pk-label" for="name">Full Name <span>*</span></label>
+            <label class="pk-label" for="name">Name <span>*</span></label>
             <input class="pk-input" id="name" name="name" type="text" placeholder="Jane Doe" required />
           </div>
 
           <div class="pk-field">
-            <label class="pk-label" for="email">Email <span>*</span></label>
+            <label class="pk-label" for="email">Email address <span>*</span></label>
             <input class="pk-input" id="email" name="email" type="email" placeholder="jane@email.com" required />
           </div>
 
@@ -139,26 +296,57 @@ const packages = [
           </div>
 
           <div class="pk-field">
-            <label class="pk-label" for="date">Date <span>*</span></label>
-            <input class="pk-input pk-input--date" id="date" name="date" type="date" required />
-          </div>
-
-          <div class="pk-field pk-field--full">
-            <label class="pk-label" for="package">Select Package <span>*</span></label>
+            <label class="pk-label" for="package">Package <span>*</span></label>
             <select class="pk-input pk-select" id="package" name="package" required>
               <option value="" disabled selected>Choose a package…</option>
-              {packages.map((p) => (
-                <option value={p.title}>{p.title} — {p.price}</option>
+              {allPackages.map((p) => (
+                <option value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+
+          <div class="pk-field">
+            <label class="pk-label" for="looks">Number of looks / outfits</label>
+            <input class="pk-input" id="looks" name="looks" type="number" min="1" placeholder="1" />
+          </div>
+
+          <div class="pk-field">
+            <label class="pk-label" for="location">Shoot location</label>
+            <select class="pk-input pk-select" id="location" name="location">
+              <option value="Studio" selected>Studio</option>
+              <option value="On location">On location</option>
+            </select>
+          </div>
+
+          <div class="pk-field pk-field--full" data-address-field hidden>
+            <label class="pk-label" for="address">Location address</label>
+            <input class="pk-input" id="address" name="address" type="text" placeholder="Venue or address for the shoot" />
+          </div>
+
+          <div class="pk-field">
+            <label class="pk-label" for="date">Proposed shoot date <span>*</span></label>
+            <input class="pk-input" id="date" name="date" type="date" required />
+          </div>
+
+          <div class="pk-field">
+            <label class="pk-label" for="slot">Proposed time slot</label>
+            <select class="pk-input pk-select" id="slot" name="slot">
+              <option value="" disabled selected>Choose a slot…</option>
+              {timeSlots.map((t) => (
+                <option value={t}>{t}</option>
               ))}
             </select>
           </div>
 
           <div class="pk-field pk-field--full">
-            <label class="pk-label" for="details">Project Details</label>
+            <label class="pk-label" for="details">Anything else</label>
             <textarea class="pk-input pk-textarea" id="details" name="details" placeholder="Tell us about your shoot, vision, references…"></textarea>
           </div>
 
-          <button type="submit" class="pk-submit">Continue to Payment</button>
+          <button type="submit" class="btn btn--fill pk-submit">Send Booking Request</button>
+          <p class="pk-form__note">
+            Your email app will open — hit send and we'll confirm your slot.
+          </p>
         </form>
       </div>
     </section>
@@ -168,77 +356,102 @@ const packages = [
 </Base>
 
 <style>
+  /* The whole page body is the white rate-card surface */
+  .pk {
+    background: var(--white);
+  }
+
   /* ---- Hero ---- */
   .pk-hero {
-    padding: 160px var(--pad) 48px;
+    padding-top: 110px;
+    padding-bottom: 64px;
   }
   .pk-hero .eyebrow {
-    margin: 0 0 40px;
+    margin: 0 0 36px;
   }
   .pk-hero__title {
-    font-size: 96px;
-    line-height: 96px;
-    letter-spacing: -4.8px;
+    font-size: clamp(56px, 10vw, 120px);
+    line-height: 0.95;
+    letter-spacing: -0.05em;
     margin: 0 0 32px;
+  }
+  .pk-hero__grad {
+    background: var(--grad-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
   .pk-hero__sub {
     font-size: 18px;
-    line-height: 29.25px;
-    color: var(--text-60);
-    max-width: 712px;
+    line-height: 29px;
+    color: var(--ink-60);
+    max-width: 620px;
     margin: 0;
   }
 
-  /* ---- Filters ---- */
-  .pk-filters {
-    padding: 0 var(--pad);
-    margin-bottom: 40px;
-  }
-  .pk-filters__row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .pk-filter {
-    height: 38px;
-    padding: 0 20px;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    font-family: var(--font-body);
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 2.4px;
-    text-transform: uppercase;
-    color: var(--text-50);
-    cursor: pointer;
-    transition: color 0.2s ease, border-color 0.2s ease;
-  }
-  .pk-filter:hover {
-    color: var(--white);
-    border-color: rgba(255, 255, 255, 0.3);
-  }
-  .pk-filter--active {
-    background: var(--grad-btn);
-    border-color: transparent;
-    color: var(--white);
+  /* ---- Groups ---- */
+  .pk-group {
+    padding: 32px 0;
   }
 
-  /* ---- Pricing grid ---- */
-  .pk-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    padding: 12px var(--pad) 0;
+  /* ---- Every booking includes ---- */
+  .pk-included {
+    padding-top: 40px;
+    padding-bottom: 12px;
   }
-  .pk-grid :global(.pcard.is-hidden) {
-    display: none !important;
+  .pk-included__panel {
+    padding: 36px 40px;
+  }
+  .pk-included__title {
+    color: var(--white);
+    font-size: clamp(22px, 3vw, 28px);
+    letter-spacing: -0.04em;
+    margin: 0 0 22px;
+  }
+  .pk-included__panel :global(li) {
+    font-size: 14.5px;
+    line-height: 23px;
+  }
+
+  /* ---- Add-ons & good to know (quieter) ---- */
+  .pk-addons {
+    padding-top: 40px;
+    padding-bottom: 56px;
+  }
+  .pk-addons__title {
+    font-size: 17px;
+    letter-spacing: -0.02em;
+    margin: 0 0 18px;
+  }
+  .pk-addons__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 760px;
+  }
+  .pk-addons__list li {
+    position: relative;
+    padding-left: 20px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--ink-50);
+  }
+  .pk-addons__list li::before {
+    content: '»';
+    position: absolute;
+    left: 0;
+    color: var(--ink-50);
+    font-weight: 700;
   }
 
   /* ---- Booking form ---- */
   .pk-book {
-    margin-top: 96px;
+    border-top: 1px solid var(--line-dark);
     padding-top: 88px;
-    padding-bottom: 88px;
+    padding-bottom: 96px;
   }
   .pk-book__inner {
     max-width: 678px;
@@ -248,15 +461,15 @@ const packages = [
     margin: 0 0 32px;
   }
   .pk-book__title {
-    font-size: 48px;
-    line-height: 48px;
-    letter-spacing: -2.4px;
+    font-size: clamp(36px, 6vw, 48px);
+    line-height: 1;
+    letter-spacing: -0.05em;
     margin: 0 0 16px;
   }
   .pk-book__sub {
     font-size: 14px;
-    line-height: 20px;
-    color: var(--text-50);
+    line-height: 22px;
+    color: var(--ink-60);
     margin: 0 0 40px;
   }
 
@@ -272,13 +485,16 @@ const packages = [
   .pk-field--full {
     grid-column: 1 / -1;
   }
+  .pk-field[hidden] {
+    display: none;
+  }
 
   .pk-label {
     font-family: var(--font-mono);
     font-size: 11px;
     letter-spacing: 2.2px;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--ink-60);
     margin-bottom: 8px;
   }
   .pk-label span {
@@ -286,79 +502,108 @@ const packages = [
   }
 
   .pk-input {
-    height: 52.5px;
+    height: 52px;
     padding: 0 16px;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: var(--white);
+    background: var(--white);
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-radius: 10px;
+    color: var(--ink);
     font-family: var(--font-body);
     font-size: 15px;
     outline: none;
     transition: border-color 0.2s ease;
   }
   .pk-input::placeholder {
-    color: rgba(255, 255, 255, 0.3);
+    color: rgba(0, 0, 0, 0.35);
   }
   .pk-input:focus {
     border-color: var(--red);
   }
 
-  .pk-input--date {
-    color-scheme: dark;
-  }
-
   .pk-select {
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23a0a0a0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23555555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 20px center;
     padding-right: 44px;
-  }
-  .pk-select option {
-    background: #0a0a0a;
-    color: var(--white);
   }
 
   .pk-textarea {
     height: 120px;
     padding: 16px;
     resize: vertical;
-    line-height: 22.5px;
-    font-family: var(--font-body);
+    line-height: 22px;
   }
 
   .pk-submit {
     grid-column: 1 / -1;
-    height: 48px;
-    margin-top: 20px;
-    background: var(--grad-btn);
+    height: 50px;
+    margin-top: 12px;
     border: 0;
-    color: var(--white);
-    font-family: var(--font-body);
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: opacity 0.25s ease;
   }
-  .pk-submit:hover {
-    opacity: 0.9;
+
+  .pk-form__note {
+    grid-column: 1 / -1;
+    font-size: 12.5px;
+    color: var(--ink-50);
+    margin: 0;
+    text-align: center;
+  }
+
+  @media (max-width: 720px) {
+    .pk-form {
+      grid-template-columns: 1fr;
+    }
+    .pk-included__panel {
+      padding: 28px 24px;
+    }
   }
 </style>
 
 <script>
-  const buttons = document.querySelectorAll<HTMLButtonElement>('.pk-filter');
-  const cards = document.querySelectorAll<HTMLElement>('.pk-grid .pcard');
-
-  buttons.forEach((btn) => {
+  // "Book" buttons on rate cards preselect the package in the form
+  const select = document.querySelector<HTMLSelectElement>('#package');
+  document.querySelectorAll<HTMLAnchorElement>('[data-package]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const filter = btn.dataset.filter;
-      buttons.forEach((b) => b.classList.toggle('pk-filter--active', b === btn));
-      cards.forEach((card) => {
-        const show = filter === 'all' || card.dataset.category === filter;
-        card.classList.toggle('is-hidden', !show);
-      });
+      if (!select) return;
+      const pkg = btn.dataset.package ?? '';
+      if ([...select.options].some((o) => o.value === pkg)) select.value = pkg;
     });
+  });
+
+  // Show the address field only for on-location shoots
+  const location = document.querySelector<HTMLSelectElement>('#location');
+  const addressField = document.querySelector<HTMLElement>('[data-address-field]');
+  location?.addEventListener('change', () => {
+    if (addressField) addressField.hidden = location.value !== 'On location';
+  });
+
+  // Static site: submitting builds a mailto to bookings@chace.studio
+  const form = document.querySelector<HTMLFormElement>('[data-booking-form]');
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!form.reportValidity()) return;
+
+    const data = new FormData(form);
+    const get = (k: string) => String(data.get(k) ?? '').trim();
+    const pkg = get('package') || 'General enquiry';
+
+    const lines = [
+      `Name: ${get('name')}`,
+      `Email: ${get('email')}`,
+      `Phone: ${get('phone') || '—'}`,
+      `Package: ${pkg}`,
+      `Number of looks/outfits: ${get('looks') || '—'}`,
+      `Shoot location: ${get('location')}${get('location') === 'On location' && get('address') ? ` — ${get('address')}` : ''}`,
+      `Proposed date: ${get('date')}`,
+      `Proposed time slot: ${get('slot') || '—'}`,
+      '',
+      'Details:',
+      get('details') || '—',
+    ];
+
+    const subject = encodeURIComponent(`Booking request — ${pkg}`);
+    const body = encodeURIComponent(lines.join('\n'));
+    window.location.href = `mailto:bookings@chace.studio?subject=${subject}&body=${body}`;
   });
 </script>
