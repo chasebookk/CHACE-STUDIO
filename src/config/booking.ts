@@ -21,16 +21,18 @@ export interface BookablePackage {
 
 export const DEPOSIT_RATE = 0.8; // 80% deposit / 20% balance
 
-// Placeholder hours until Hadley confirms real ones:
-// Mon–Sat 10:00–19:00, Sunday closed. 0=Sunday … 6=Saturday.
+// CHACE STUDIOS opening hours (confirmed by Hadley, 27 Jul 2026).
+// Mon–Sat 09:00–23:59 · Sunday 15:00–23:59. 0=Sunday … 6=Saturday.
+// `close` is the latest a session may END, so the last start time offered
+// is (close − session duration).
 export const OPENING_HOURS: Record<number, { open: string; close: string } | null> = {
-  0: null,
-  1: { open: '10:00', close: '19:00' },
-  2: { open: '10:00', close: '19:00' },
-  3: { open: '10:00', close: '19:00' },
-  4: { open: '10:00', close: '19:00' },
-  5: { open: '10:00', close: '19:00' },
-  6: { open: '10:00', close: '19:00' },
+  0: { open: '15:00', close: '23:59' }, // Sunday
+  1: { open: '09:00', close: '23:59' },
+  2: { open: '09:00', close: '23:59' },
+  3: { open: '09:00', close: '23:59' },
+  4: { open: '09:00', close: '23:59' },
+  5: { open: '09:00', close: '23:59' },
+  6: { open: '09:00', close: '23:59' },
 };
 
 export const SLOT_STEP_MIN = 60; // start times offered on the hour
