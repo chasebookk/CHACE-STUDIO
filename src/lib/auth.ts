@@ -16,6 +16,26 @@ export function checkAdminAuth(request: Request): boolean {
   }
 }
 
+/**
+ * Explicit CSRF guard for admin form posts.
+ *
+ * Astro's built-in checkOrigin compares the Origin header against the origin
+ * it derives from the incoming request, which on Vercel is the immutable
+ * deployment host — so requests through the public alias were always
+ * rejected. We compare against PUBLIC_SITE_URL instead, which is the origin
+ * the admin page is actually served from.
+ */
+export function isSameOrigin(request: Request): boolean {
+  const origin = request.headers.get('origin');
+  if (!origin) return false;
+  const allowed = (env('PUBLIC_SITE_URL') ?? '').replace(/\/$/, '');
+  return allowed !== '' && origin.replace(/\/$/, '') === allowed;
+}
+
+export function forbidden(): Response {
+  return new Response('Cross-site request blocked', { status: 403 });
+}
+
 export function unauthorized(): Response {
   return new Response('Authentication required', {
     status: 401,

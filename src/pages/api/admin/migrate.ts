@@ -3,7 +3,7 @@ import type { APIRoute } from 'astro';
 // scripts/setup-db.mjs runs locally.
 import schema from '../../../../db/schema.sql?raw';
 import { query } from '../../../lib/db';
-import { checkAdminAuth, unauthorized } from '../../../lib/auth';
+import { checkAdminAuth, unauthorized, isSameOrigin, forbidden } from '../../../lib/auth';
 
 export const prerender = false;
 
@@ -20,6 +20,7 @@ const json = (data: unknown, status = 200) =>
  */
 export const POST: APIRoute = async ({ request }) => {
   if (!checkAdminAuth(request)) return unauthorized();
+  if (!isSameOrigin(request)) return forbidden();
 
   try {
     await query(schema);

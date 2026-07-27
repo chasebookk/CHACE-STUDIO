@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { query, type BookingRow } from '../../../lib/db';
 import { getStripe } from '../../../lib/stripe';
-import { checkAdminAuth, unauthorized } from '../../../lib/auth';
+import { checkAdminAuth, unauthorized, isSameOrigin, forbidden } from '../../../lib/auth';
 import { siteUrl } from '../../../lib/env';
 import { sendEmail } from '../../../lib/email';
 
@@ -9,6 +9,7 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
   if (!checkAdminAuth(request)) return unauthorized();
+  if (!isSameOrigin(request)) return forbidden();
 
   const form = await request.formData();
   const bookingId = Number(form.get('booking_id'));

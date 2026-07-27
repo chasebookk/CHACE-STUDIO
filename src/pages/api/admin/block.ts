@@ -1,11 +1,12 @@
 import type { APIRoute } from 'astro';
 import { query } from '../../../lib/db';
-import { checkAdminAuth, unauthorized } from '../../../lib/auth';
+import { checkAdminAuth, unauthorized, isSameOrigin, forbidden } from '../../../lib/auth';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
   if (!checkAdminAuth(request)) return unauthorized();
+  if (!isSameOrigin(request)) return forbidden();
 
   const form = await request.formData();
   const date = String(form.get('date') ?? '');
