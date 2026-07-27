@@ -27,3 +27,5 @@ yarn-error.log*
 setenv.sh
 .stripe-listen.log
 .vercel/
+.vercel
+.env*

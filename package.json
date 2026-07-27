@@ -10,12 +10,15 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/vercel": "^7.8.2",
+    "@astrojs/vercel": "^9.0.5",
     "@fontsource-variable/inter": "^5.1.0",
     "@fontsource-variable/jetbrains-mono": "^5.1.0",
     "@fontsource/archivo-black": "^5.1.0",
-    "astro": "^4.16.18",
+    "astro": "^5.18.2",
     "pg": "^8.22.0",
     "stripe": "^22.3.2"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
