@@ -1,7 +1,7 @@
 import { getPackage, getStudio } from '../config/booking';
 import type { BookingRow } from './db';
 import { buildIcs } from './ics';
-import { sendEmail, OWNER_EMAIL, type Attachment } from './email';
+import { sendEmail, OWNER_EMAIL, ownerNotifyAddress, type Attachment } from './email';
 
 const money = (p: number) => `£${(p / 100).toFixed(2)}`;
 
@@ -96,7 +96,7 @@ async function notifyOwner(b: BookingRow): Promise<boolean> {
       <div style="color:#111;font-size:14px;white-space:pre-wrap">${b.notes ? escapeHtml(b.notes) : '—'}</div>
     </div>`);
 
-  return sendEmail(OWNER_EMAIL, subject, body, [icsFor(b)]);
+  return sendEmail(ownerNotifyAddress(), subject, body, [icsFor(b)]);
 }
 
 /** Branded confirmation to the client. */

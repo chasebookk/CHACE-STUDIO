@@ -12,6 +12,15 @@ function fromAddress(): string {
   return env('EMAIL_FROM') ?? `CHACE STUDIOS <${OWNER_EMAIL}>`;
 }
 
+/**
+ * Where owner notifications land. Resend's test sender only delivers to the
+ * account owner's own address, so set OWNER_NOTIFY_EMAIL to that address
+ * until chace.studio is verified. Remove it to notify the real inbox.
+ */
+export function ownerNotifyAddress(): string {
+  return env('OWNER_NOTIFY_EMAIL') ?? OWNER_EMAIL;
+}
+
 export interface Attachment {
   filename: string;
   /** Raw UTF-8 content; encoded to base64 for the API. */
