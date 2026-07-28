@@ -27,7 +27,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const tables = await query<{ table_name: string }>(
       `SELECT table_name FROM information_schema.tables
-       WHERE table_schema = 'public' AND table_name IN ('bookings', 'blocked_slots')
+       WHERE table_schema = 'public'
        ORDER BY table_name`
     );
     const columns = await query<{ column_name: string }>(
@@ -39,9 +39,16 @@ export const POST: APIRoute = async ({ request }) => {
               (SELECT count(*) FROM blocked_slots)::int AS blocked`
     );
 
+    const indexes = await query<{ indexname: string }>(
+      `SELECT indexname FROM pg_indexes WHERE schemaname = 'public' ORDER BY indexname`
+    );
+
     return json({
       ok: true,
       tables: tables.rows.map((r) => r.table_name),
+      uniqueGuards: indexes.rows
+        .map((r) => r.indexname)
+        .filter((n) => n.includes('stripe_session') || n.includes('processed_events_session')),
       bookingColumns: columns.rows.map((r) => r.column_name),
       hasStudioId: columns.rows.some((r) => r.column_name === 'studio_id'),
       rowCounts: counts.rows[0],
