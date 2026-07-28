@@ -9,15 +9,25 @@ interface Props {
 }
 
 const { images, caption, holdMs = 3000, fadeMs = 600 } = Astro.props;
+// Order is fixed and never shuffled: `first` paints immediately and the rest
+// cycle in the order given, looping back to the first.
 const [first, ...rest] = images;
 // Unique id so several panels can coexist on one page.
 const uid = `ss-${Math.random().toString(36).slice(2, 9)}`;
 ---
 
 <figure class="ss" style={`--fade-ms:${fadeMs}ms`}>
-  <div class="ss__frame" data-slideshow={uid} data-hold={holdMs} data-rest={JSON.stringify(rest)}>
+  <div class="ss__frame" data-slideshow={uid} data-hold={holdMs} data-images={JSON.stringify(images)}>
     <!-- Two stacked layers alternate opacity, so there is never a hard cut. -->
-    <img class="ss__img is-front" src={first} alt="" aria-hidden="true" decoding="async" />
+    <img
+      class="ss__img is-front"
+      src={first}
+      alt=""
+      aria-hidden="true"
+      fetchpriority="high"
+      loading="eager"
+      decoding="async"
+    />
     <img class="ss__img" alt="" aria-hidden="true" decoding="async" />
   </div>
   {caption && <figcaption class="ss__caption">{caption}</figcaption>}
@@ -73,9 +83,11 @@ const uid = `ss-${Math.random().toString(36).slice(2, 9)}`;
     const layers = Array.from(frame.querySelectorAll<HTMLImageElement>('.ss__img'));
     if (layers.length < 2) return;
 
-    const rest: string[] = JSON.parse(frame.dataset.rest || '[]');
+    // Cycle the full list, not just the images after the first, so the
+    // sequence loops back to image one instead of restarting at image two.
+    const all: string[] = JSON.parse(frame.dataset.images || '[]');
     const holdMs = Number(frame.dataset.hold || 3000);
-    if (rest.length === 0) return;
+    if (all.length < 2) return;
 
     // Reduced motion: the first image simply stays.
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -84,7 +96,8 @@ const uid = `ss-${Math.random().toString(36).slice(2, 9)}`;
       parseFloat(getComputedStyle(frame).getPropertyValue('--fade-ms')) || 600;
 
     let front = 0;
-    let cursor = 0;
+    // Layer one already shows all[0], so the next image due is all[1].
+    let cursor = 1;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let running = false;
 
@@ -106,8 +119,8 @@ const uid = `ss-${Math.random().toString(36).slice(2, 9)}`;
         running = false;
         return;
       }
-      const src = rest[cursor];
-      cursor = (cursor + 1) % rest.length;
+      const src = all[cursor];
+      cursor = (cursor + 1) % all.length;
 
       try {
         // Swap only once the bytes are in, so the layer never fades up empty.
@@ -121,11 +134,11 @@ const uid = `ss-${Math.random().toString(36).slice(2, 9)}`;
       } catch {
         /* skip a missing image and keep going */
       }
-      fetchImage(rest[cursor]).catch(() => {});
+      fetchImage(all[cursor]).catch(() => {});
       schedule(holdMs + fadeMs);
     }
 
-    fetchImage(rest[0])
+    fetchImage(all[1])
       .then(() => {
         running = true;
         schedule(holdMs);

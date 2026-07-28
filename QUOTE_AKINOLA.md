@@ -8,10 +8,14 @@
 - Brand styling identical to `/book/[slug]`: dark cinematic hero, white rate card section, orange to red gradient accents.
 
 ## Rotating image panel
-Three reference images sit in `public/assets/img/quotes/akinola/`:
-`akinola-01.jpg`, `akinola-02.jpg`, `akinola-03.jpg` (1000x1000 each).
+Four reference images sit in `public/assets/img/quotes/akinola/`:
+`akinola-01.jpg`, `akinola-02.jpg`, `akinola-03.jpg`, `akinola-04.jpg` (1000x1000 each).
 
-Display them in a **square frame that cycles between the three images**, using the same crossfade behaviour as the homepage hero slideshow. Hold roughly 3 seconds, crossfade roughly 600ms, respect `prefers-reduced-motion`. Caption underneath, small mono type:
+Display them in a **square frame that cycles through all four images**, using the same crossfade behaviour as the homepage hero slideshow. Hold roughly 3 seconds, crossfade roughly 600ms, respect `prefers-reduced-motion`.
+
+**Order is fixed, do not shuffle.** `akinola-01.jpg` must always be the first image shown on load, then 02, 03, 04, then loop back to 01. Preload `akinola-01.jpg` so it paints immediately.
+
+Caption underneath, small mono type:
 > Reference direction for your session
 
 ## Header

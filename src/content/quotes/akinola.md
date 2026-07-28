@@ -8,7 +8,7 @@ packageSlug: 'maternity'
 tierId: '2-looks'
 
 imagesDir: '/assets/img/quotes/akinola'
-imageCount: 3
+imageCount: 4
 imageCaption: 'Reference direction for your session'
 
 priceNote: >-
