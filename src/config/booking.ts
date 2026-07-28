@@ -149,14 +149,17 @@ function studioHireTiers(): Tier[] {
   });
 }
 
+// Look-based sessions book one hour of studio time per look (90 minutes per
+// look for pre-wedding), so the calendar is blocked for the true session
+// length rather than a single slot.
 export const PACKAGES: BookablePackage[] = [
   {
     slug: 'individual-portrait',
     title: 'Individual Portrait',
     tiers: [
       { id: '1-look', label: '1 look', includes: '4 edited pictures', pricePence: 17000, charge: 'full', durationMin: 60 },
-      { id: '2-looks', label: '2 looks', includes: '8 edited pictures', pricePence: 30000, charge: 'deposit', durationMin: 60 },
-      { id: '3-looks', label: '3 looks', includes: '12 edited pictures', pricePence: 40000, charge: 'deposit', durationMin: 60 },
+      { id: '2-looks', label: '2 looks', includes: '8 edited pictures', pricePence: 30000, charge: 'deposit', durationMin: 120 },
+      { id: '3-looks', label: '3 looks', includes: '12 edited pictures', pricePence: 40000, charge: 'deposit', durationMin: 180 },
     ],
   },
   {
@@ -164,8 +167,8 @@ export const PACKAGES: BookablePackage[] = [
     title: 'Professional Corporate Headshots',
     tiers: [
       { id: '1-look', label: '1 look', includes: '4 retouched pictures', pricePence: 15000, charge: 'full', durationMin: 60 },
-      { id: '2-looks', label: '2 looks', includes: '8 retouched pictures', pricePence: 30000, charge: 'deposit', durationMin: 60 },
-      { id: '3-looks', label: '3 looks', includes: '12 retouched pictures', pricePence: 40000, charge: 'deposit', durationMin: 60 },
+      { id: '2-looks', label: '2 looks', includes: '8 retouched pictures', pricePence: 30000, charge: 'deposit', durationMin: 120 },
+      { id: '3-looks', label: '3 looks', includes: '12 retouched pictures', pricePence: 40000, charge: 'deposit', durationMin: 180 },
     ],
   },
   {
@@ -174,8 +177,8 @@ export const PACKAGES: BookablePackage[] = [
     tiers: [
       { id: 'single', label: 'Single, 1 look', includes: '4 edited images', pricePence: 17000, charge: 'full', durationMin: 60 },
       { id: 'couple', label: 'Couple, 1 look', includes: '6 edited images', pricePence: 20000, charge: 'full', durationMin: 60 },
-      { id: '2-looks', label: '2 looks', includes: '10 edited images', pricePence: 32000, charge: 'deposit', durationMin: 60 },
-      { id: '3-looks', label: '3 looks', includes: '15 edited images', pricePence: 45000, charge: 'deposit', durationMin: 60 },
+      { id: '2-looks', label: '2 looks', includes: '10 edited images', pricePence: 32000, charge: 'deposit', durationMin: 120 },
+      { id: '3-looks', label: '3 looks', includes: '15 edited images', pricePence: 45000, charge: 'deposit', durationMin: 180 },
     ],
   },
   {
@@ -184,8 +187,8 @@ export const PACKAGES: BookablePackage[] = [
     title: 'Kids Shoot, ages 1 to 10',
     tiers: [
       { id: '1-look', label: '1 look', includes: '4 edited images', pricePence: 15000, charge: 'full', durationMin: 60 },
-      { id: '2-looks', label: '2 looks', includes: '8 edited images', pricePence: 25000, charge: 'deposit', durationMin: 60 },
-      { id: '3-looks', label: '3 looks', includes: '12 edited images', pricePence: 35000, charge: 'deposit', durationMin: 60 },
+      { id: '2-looks', label: '2 looks', includes: '8 edited images', pricePence: 25000, charge: 'deposit', durationMin: 120 },
+      { id: '3-looks', label: '3 looks', includes: '12 edited images', pricePence: 35000, charge: 'deposit', durationMin: 180 },
     ],
   },
   {
@@ -198,8 +201,8 @@ export const PACKAGES: BookablePackage[] = [
     title: 'Pre-Wedding & Engagement',
     tiers: [
       { id: '1-look', label: '1 look', includes: '7 images per look', pricePence: 20000, charge: 'full', durationMin: 90 },
-      { id: '2-looks', label: '2 looks', pricePence: 40000, charge: 'deposit', durationMin: 90 },
-      { id: '3-looks', label: '3 looks', pricePence: 50000, charge: 'deposit', durationMin: 90 },
+      { id: '2-looks', label: '2 looks', pricePence: 40000, charge: 'deposit', durationMin: 180 },
+      { id: '3-looks', label: '3 looks', pricePence: 50000, charge: 'deposit', durationMin: 270 },
     ],
   },
   {
