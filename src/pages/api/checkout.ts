@@ -12,6 +12,7 @@ import { getStripe } from '../../lib/stripe';
 import { toMin, toHHMM, slotIsFree, generateRef } from '../../lib/availability';
 import { isReturningPodcastClient } from '../../lib/returning';
 import { siteUrl } from '../../lib/env';
+import { checkRateLimit, clientIp } from '../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -22,6 +23,23 @@ const json = (data: unknown, status = 200) =>
   });
 
 export const POST: APIRoute = async ({ request }) => {
+  // Throttle before doing any work: every accepted request holds a slot.
+  const limit = await checkRateLimit(clientIp(request));
+  if (!limit.allowed) {
+    return new Response(
+      JSON.stringify({
+        error: 'Too many booking attempts. Please wait a few minutes and try again.',
+      }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': String(limit.retryAfterSeconds),
+        },
+      }
+    );
+  }
+
   let body: any;
   try {
     body = await request.json();

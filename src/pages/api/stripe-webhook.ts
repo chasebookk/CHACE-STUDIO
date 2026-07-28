@@ -49,6 +49,22 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response('ok', { status: 200 });
   }
 
+  // Idempotency gate. Stripe retries on any non-2xx or timeout, and this
+  // endpoint writes to the database and sends email before responding, so a
+  // slow send is enough to trigger a replay. Claim the event first: if the
+  // row already exists we have handled it, so stop before touching money.
+  const claim = await query(
+    `INSERT INTO processed_events (event_id, session_id, booking_id, kind, amount_pence)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT DO NOTHING
+     RETURNING event_id`,
+    [event.id, session.id, bookingId, kind, amountTotal]
+  );
+  if (claim.rowCount === 0) {
+    console.log(`[webhook] event ${event.id} already processed, skipping`);
+    return new Response('ok (duplicate)', { status: 200 });
+  }
+
   const found = await query<BookingRow>(`SELECT * FROM bookings WHERE id = $1`, [bookingId]);
   const booking = found.rows[0];
   if (!booking) {
@@ -136,7 +152,15 @@ export const POST: APIRoute = async ({ request }) => {
     );
     await notifyFromDb(booking.id);
   } else if (kind === 'balance') {
-    const newPaid = booking.paid_pence + amountTotal;
+    // Absolute, not additive: sum every payment Stripe has actually confirmed
+    // for this booking. Re-running this yields the same figure rather than
+    // adding the amount a second time.
+    const paid = await query<{ total: string | null }>(
+      `SELECT SUM(amount_pence)::bigint AS total FROM processed_events
+        WHERE booking_id = $1 AND kind IN ('deposit', 'full', 'balance')`,
+      [booking.id]
+    );
+    const newPaid = Math.min(booking.total_pence, Number(paid.rows[0]?.total ?? 0));
     const newBalance = Math.max(0, booking.total_pence - newPaid);
     await query(
       `UPDATE bookings SET paid_pence = $2, balance_pence = $3,

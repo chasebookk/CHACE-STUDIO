@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Private and non-indexable areas
+Disallow: /admin
+Disallow: /api/
+Disallow: /quote/
+Disallow: /booking/
+
+Sitemap: https://chace.studio/sitemap.xml

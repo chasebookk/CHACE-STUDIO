@@ -34,3 +34,34 @@ CREATE INDEX IF NOT EXISTS blocked_slots_date_idx ON blocked_slots (date);
 
 -- Migrations (idempotent; safe on databases created before these columns).
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS studio_id TEXT;
+
+-- Webhook idempotency: one row per Stripe event we have already handled.
+-- The webhook inserts here first with ON CONFLICT DO NOTHING, so a retried
+-- or replayed event is recognised and skipped before any money is touched.
+CREATE TABLE IF NOT EXISTS processed_events (
+  event_id TEXT PRIMARY KEY,
+  session_id TEXT,
+  booking_id INT,
+  kind TEXT,
+  amount_pence INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- A checkout session can only ever be completed once, so guard on it too in
+-- case Stripe ever delivers the same completion under a new event id.
+CREATE UNIQUE INDEX IF NOT EXISTS processed_events_session_idx
+  ON processed_events (session_id) WHERE session_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS processed_events_booking_idx ON processed_events (booking_id);
+
+-- One booking per Stripe checkout session.
+CREATE UNIQUE INDEX IF NOT EXISTS bookings_stripe_session_idx
+  ON bookings (stripe_session_id) WHERE stripe_session_id IS NOT NULL;
+
+-- Per-IP checkout throttling. Rows are pruned as they are checked.
+CREATE TABLE IF NOT EXISTS checkout_attempts (
+  id SERIAL PRIMARY KEY,
+  ip TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS checkout_attempts_ip_idx ON checkout_attempts (ip, created_at);

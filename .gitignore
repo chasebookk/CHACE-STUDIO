@@ -29,3 +29,6 @@ setenv.sh
 .vercel/
 .vercel
 .env*
+
+# Claude Code local state
+.claude/

@@ -16,7 +16,11 @@ const {
   robots = 'index, follow',
 } = Astro.props;
 
-const ogImageUrl = new URL(ogImage, Astro.url);
+// Canonical always points at the public site URL, so the vercel.app copy of
+// a page never competes with chace.studio in search results.
+const siteBase = (import.meta.env.PUBLIC_SITE_URL ?? Astro.url.origin).replace(/\/$/, '');
+const canonical = new URL(Astro.url.pathname.replace(/\/$/, '') || '/', siteBase).href;
+const ogImageUrl = new URL(ogImage, siteBase);
 ---
 
 <!doctype html>
@@ -26,10 +30,12 @@ const ogImageUrl = new URL(ogImage, Astro.url);
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="robots" content={robots} />
+    <link rel="canonical" href={canonical} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:url" content={canonical} />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title}</title>
