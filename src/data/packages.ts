@@ -1,6 +1,9 @@
-// Display copy for the rate cards — mirrors PACKAGES.md (authoritative).
+// Display copy for the rate cards, mirroring PACKAGES.md (authoritative).
 // `slug` matches src/config/booking.ts so /packages, /book/[slug] and the
 // booking widget all speak the same identifiers.
+//
+// Cards show their first two price tiers only. Every remaining tier lives in
+// the Options dropdown on the booking form.
 import { EMAIL } from './portfolio';
 
 export interface CardPrice {
@@ -13,8 +16,11 @@ export interface PackageCard {
   title: string;
   image: string;
   tagline: string;
+  /** Headline tiers shown on the card, at most two. */
   prices: CardPrice[];
   bullets: string[];
+  /** Highlighted line rendered on the card itself. */
+  highlight?: string;
   /** Enquiry-only packages are never bookable online and get no /book page. */
   enquiryOnly?: boolean;
   ctaLabel?: string;
@@ -39,14 +45,14 @@ export const GROUPS: PackageGroup[] = [
         tagline:
           'Studio portraits built around you. Lighting, direction and retouching that make a single frame do the work of a hundred.',
         prices: [
-          { amount: '£170', label: '1 look · 4 edited pictures' },
-          { amount: '£300', label: '2 looks · 8 edited pictures' },
+          { amount: '£170', label: '1 look, 4 edited pictures' },
+          { amount: '£300', label: '2 looks, 8 edited pictures' },
         ],
         bullets: [
-          "Guided posing — you don't need to know what to do with your hands",
+          "Guided posing, you don't need to know what to do with your hands",
           'Private online gallery to choose your favourites',
           'Further discount considered on multiple looks',
-          'Low-resolution unedited images available on request',
+          'Low resolution unedited images available on request',
         ],
       },
       {
@@ -54,15 +60,15 @@ export const GROUPS: PackageGroup[] = [
         title: 'Professional Corporate Headshots',
         image: '/assets/img/pricing/corporate-headshots.jpg',
         tagline:
-          'Headshots that hold up on LinkedIn, a company website and a conference banner. Clean, consistent, and shot to a brief — so an entire team matches.',
+          'Headshots that hold up on LinkedIn, a company website and a conference banner. Clean, consistent, and shot to a brief, so an entire team matches.',
         prices: [
-          { amount: '£150', label: '1 look · 4 retouched pictures' },
-          { amount: '£300', label: '2 looks · 8 retouched pictures' },
+          { amount: '£150', label: '1 look, 4 retouched pictures' },
+          { amount: '£300', label: '2 looks, 8 retouched pictures' },
         ],
         bullets: [
           'Wardrobe and background guidance before the session',
-          'Natural retouching — polished, still recognisably you',
-          'Delivered in web and print-ready crops',
+          'Natural retouching, polished but still recognisably you',
+          'Delivered in web and print ready crops',
           'Ideal for founders, consultants, estate agents, legal and medical practices',
         ],
       },
@@ -72,27 +78,29 @@ export const GROUPS: PackageGroup[] = [
         image: '/assets/img/pricing/maternity.jpg',
         tagline: 'A quiet, beautifully lit record of the weeks before everything changes.',
         prices: [
-          { amount: '£170', label: 'single · 1 look · 4 edited images' },
-          { amount: '£200', label: 'couple · 1 look · 6 edited images' },
+          { amount: '£170', label: 'single, 1 look, 4 edited images' },
+          { amount: '£200', label: 'couple, 1 look, 6 edited images' },
         ],
+        highlight:
+          'Two looks, £320. Both looks can be solo, both can be with your partner, or one of each. The price stays the same either way.',
         bullets: [
-          "Relaxed pace — we work around how you're feeling on the day",
-          'Low-resolution unedited images available on request',
+          "Relaxed pace, we work around how you're feeling on the day",
+          'Low resolution unedited images available on request',
         ],
       },
       {
         slug: 'baby-shoot',
-        title: 'Baby Shoot · Ages 1–10',
+        title: 'Kids Shoot, ages 1 to 10',
         image: '/assets/img/pricing/baby-shoot.jpg',
         tagline: "Patient, playful sessions for little ones. We work at their pace, not the clock's.",
         prices: [
-          { amount: '£150', label: '1 look · 4 edited images' },
-          { amount: '£250', label: '2 looks · 8 edited images' },
+          { amount: '£150', label: '1 look, 4 edited images' },
+          { amount: '£250', label: '2 looks, 8 edited images' },
         ],
         bullets: [
-          "Bring snacks and a spare outfit — we'll handle the rest",
+          "Bring snacks and a spare outfit, we'll handle the rest",
           'Discount on multiple looks',
-          'Low-resolution unedited images available on request',
+          'Low resolution unedited images available on request',
         ],
       },
       {
@@ -101,13 +109,15 @@ export const GROUPS: PackageGroup[] = [
         image: '/assets/img/pricing/family.jpg',
         tagline: 'Everyone in one frame, properly lit. The picture that actually ends up on the wall.',
         prices: [
-          { amount: '£250', label: 'per look · family of 4 · 8 pictures per look' },
-          { amount: '+£20', label: 'per additional person' },
+          { amount: '£250', label: '1 look, family of 4, 8 pictures' },
+          { amount: '£425', label: '2 looks, £500 less 15%' },
         ],
+        highlight: '15% comes off automatically the moment you book more than one look.',
         bullets: [
           'Coordinated group and individual frames in the same session',
           'Works for milestone birthdays, anniversaries and reunions',
-          'Discount considered on multiple looks',
+          '£20 per additional person beyond a family of 4',
+          '15% off automatically when you book more than one look',
         ],
       },
     ],
@@ -120,15 +130,14 @@ export const GROUPS: PackageGroup[] = [
         slug: 'pre-wedding-engagement',
         title: 'Pre-Wedding & Engagement',
         image: '/assets/img/pricing/pre-wedding-engagement.jpg',
-        tagline: 'Your story before the day itself — styled, directed, and shot in studio or on location.',
+        tagline: 'Your story before the day itself, styled, directed, and shot in studio or on location.',
         prices: [
-          { amount: '£200', label: '1 look · 7 images per look' },
+          { amount: '£200', label: '1 look, 7 images per look' },
           { amount: '£400', label: '2 looks' },
-          { amount: '£500', label: '3 looks' },
         ],
         bullets: [
           'Location scouting and outfit guidance included in planning',
-          'Low-resolution unedited images available on request',
+          'Low resolution unedited images available on request',
         ],
       },
       {
@@ -136,26 +145,35 @@ export const GROUPS: PackageGroup[] = [
         title: 'Civil Wedding',
         image: '/assets/img/pricing/civil-wedding.jpg',
         tagline: 'Full coverage of the ceremony and the moments either side of it.',
-        prices: [{ amount: 'From £300', label: '1 hour · within London' }],
+        prices: [
+          { amount: '£300', label: '1 hour' },
+          { amount: '£510', label: '2 hours, £600 less 15%' },
+        ],
+        highlight: 'Book more than one hour and 15% comes off automatically. Up to 10 hours a day.',
         bullets: [
           '10 retouched portraits of the couple, plus all edited images',
           'Ceremony, signing, confetti and group frames',
-          'Additional hours available — arranged in advance',
-          'Off-site and outside-London coverage quoted on request',
+          '15% off automatically on bookings over one hour',
+          'Off site and outside London coverage quoted on request',
         ],
       },
       {
         slug: 'event-shoot',
         title: 'Event Shoot',
         image: '/assets/img/pricing/events.jpg',
-        tagline: 'Naming ceremonies, birthdays, corporate events — covered end to end, delivered fast.',
-        prices: [{ amount: 'From £300', label: '2 hours · within London' }],
+        tagline: 'Naming ceremonies, birthdays, corporate events, covered end to end and delivered fast.',
+        prices: [
+          { amount: '£300', label: 'first 2 hours' },
+          { amount: '£405', label: '3 hours, £450 less 10%' },
+        ],
+        highlight:
+          '£150 for each hour after the first two, and 10% comes off automatically past two hours. Up to 10 hours a day.',
         bullets: [
           'Includes but not limited to naming ceremonies, birthday parties and corporate events',
-          'Candid coverage plus set-piece group portraits',
-          'Delivered via a custom web gallery — shareable with every guest',
+          'Candid coverage plus set piece group portraits',
+          'Delivered via a custom web gallery, shareable with every guest',
           'Frames and USB delivery available',
-          'Further discount considered on multiple hours',
+          '10% off automatically on bookings over two hours',
         ],
       },
     ],
@@ -173,11 +191,12 @@ export const GROUPS: PackageGroup[] = [
           { amount: '£35', label: '1 hour' },
           { amount: '£60', label: '2 hours' },
         ],
+        highlight: 'Every hour beyond two adds £30. Up to 10 hours a day.',
         bullets: [
           'Professional lighting, backdrops and shooting space',
           'Suitable for photographers, content creators and brands',
           '5 Pocklingtons Walk, Leicester LE1 6BT',
-          'Longer bookings and regular-user rates available on request',
+          'Additional hours beyond two are £30 each',
         ],
       },
       {
@@ -185,14 +204,15 @@ export const GROUPS: PackageGroup[] = [
         title: 'Podcast & Live Broadcast Production',
         image: '/assets/img/pricing/podcast-live-broadcast.jpg',
         tagline:
-          'Multi-cam podcast and live broadcast production in a room built for it. Turn up, talk, walk out with the episode.',
+          'Multi camera podcast and live broadcast production in a room built for it. Turn up, talk, walk out with the episode.',
         prices: [
-          { amount: '£200', label: '1-hour session · 1–3 speakers' },
-          { amount: '£150', label: 'per episode · continuous/recurring package' },
+          { amount: '£200', label: 'first session, 1 hour, 1 to 3 speakers' },
+          { amount: '£150', label: 'returning client, per episode' },
         ],
+        highlight: 'Booked with us before? Your £150 returning rate is applied automatically at checkout.',
         bullets: [
-          'Multi-camera capture and professional microphones',
-          'Multi-track audio recorded and mixed',
+          'Multi camera capture and professional microphones',
+          'Multi track audio recorded and mixed',
           'Live streaming setup available',
           'Recurring package keeps your release schedule consistent',
           'Please note: we are not responsible for designing your assets such as intro cards and display graphics',
@@ -226,20 +246,20 @@ export function getCard(slug: string): PackageCard | undefined {
 export const INCLUDED = [
   'Private online gallery to select your images',
   'Professional retouching on every selected image',
-  'Digital delivery via Google Drive or WhatsApp (events: custom web gallery, frames or USB)',
-  'Edits delivered within 4–6 working days of your selection',
-  'Full delivery 7–10 days after selection',
+  'Digital delivery via Google Drive or WhatsApp. Events are delivered via a custom web gallery, frames or USB',
+  'Edits delivered within 4 to 6 working days of your selection',
+  'Full delivery 7 to 10 days after selection',
   'Photobooks available on request',
 ];
 
 export const ADDONS = [
-  'Express delivery — 24-hour turnaround £50 · 48-hour £35',
-  'Extra edited image — £20 each',
-  'Additional person in frame — £40 (includes one extra edited image)',
-  'Outdoor / location shoots — £45 logistics fee',
-  'Midnight sessions (from 10:00 PM) — £35',
-  'Low-resolution unedited images available on request',
-  'Booking: full payment secures a single-outfit session; multi-outfit bookings need an 80% deposit, balance due immediately after the shoot',
-  'All appointments run to time slots — lateness may attract extra charges. Extra hours are payable immediately.',
-  'Studio rental fees are payable by the client · No refunds',
+  'Express delivery: 24 hour turnaround £50, 48 hour £35',
+  'Extra edited image £20 each',
+  'Additional person in frame £40, includes one extra edited image',
+  'Outdoor and location shoots, £45 logistics fee',
+  'Midnight sessions from 10:00 PM, £35',
+  'Low resolution unedited images available on request',
+  'Booking: single look and single hour sessions are paid in full. Every other booking takes an 80% deposit, with the remaining 20% due on or immediately after the session',
+  'All appointments run to time slots, lateness may attract extra charges. Extra hours are payable immediately',
+  'Studio rental fees are payable by the client. No refunds',
 ];

@@ -6,26 +6,31 @@ import Carousel from '../components/Carousel.astro';
 import RateCard from '../components/RateCard.astro';
 import BookingWidget from '../components/BookingWidget.astro';
 import { GROUPS as groups, INCLUDED as included, ADDONS as addons } from '../data/packages';
+import { getPackage } from '../config/booking';
+
+// A card advertises two tiers; if the package offers more, point at the
+// dropdown rather than silently hiding the rest.
+const hasMoreOptions = (slug: string) => (getPackage(slug)?.tiers.length ?? 0) > 2;
 
 ---
 
 <Base
   title="Photography Packages & Prices Leicester | CHACE STUDIOS"
-  description="Transparent photography, wedding, event, studio hire and podcast packages at CHACE STUDIOS Leicester. Book in minutes — no account needed."
+  description="Transparent photography, wedding, event, studio hire and podcast packages at CHACE STUDIOS Leicester. Book in minutes, no account needed."
 >
   <Header />
 
   <main class="pk">
     <!-- Hero (white, rate-card) -->
     <section class="pk-hero sec-light">
-      <p class="eyebrow reveal">— Packages &amp; Booking</p>
+      <p class="eyebrow reveal">Packages &amp; Booking</p>
       <h1 class="display pk-hero__title reveal">
         The rate<br />
         <span class="pk-hero__grad">card.</span>
       </h1>
       <p class="pk-hero__sub reveal">
         Transparent packages across photography, video, podcast and studio hire.
-        No account needed — book in minutes.
+        No account needed, book in minutes.
       </p>
     </section>
 
@@ -34,7 +39,7 @@ import { GROUPS as groups, INCLUDED as included, ADDONS as addons } from '../dat
       <section class="pk-group sec-light" id={g.id}>
         <Carousel label={g.label}>
           {g.cards.map((c) => (
-            <RateCard {...c} />
+            <RateCard {...c} moreOptions={hasMoreOptions(c.slug)} />
           ))}
         </Carousel>
       </section>

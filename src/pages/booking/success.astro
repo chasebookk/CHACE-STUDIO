@@ -60,30 +60,30 @@ const isBalancePayment = booking && paidPence > 0 && booking.status === 'deposit
         <h1 class="display bs__title">Hmm.</h1>
         <p class="bs__sub">{error}</p>
         <p class="bs__sub">
-          If you've just paid, refresh in a few seconds — or email
+          If you've just paid, refresh in a few seconds, or email
           <a href="mailto:bookings@chace.studio">bookings@chace.studio</a> with any questions.
         </p>
         <a href="/packages" class="btn btn--fill">Back to packages</a>
       </section>
     ) : (
       <section class="bs__card">
-        <p class="eyebrow">— Booking {isBalancePayment ? 'balance received' : 'confirmed'}</p>
+        <p class="eyebrow">Booking {isBalancePayment ? 'balance received' : 'confirmed'}</p>
         <h1 class="display bs__title">See you at<br /><span class="grad-text">the studio.</span></h1>
 
         <div class="panel-dark bs__panel">
           <ul>
-            <li><strong>Reference:</strong> {booking!.ref} — quote this in any message</li>
+            <li><strong>Reference:</strong> {booking!.ref}. Quote this in any message</li>
             <li><strong>Session:</strong> {booking!.tier_label}</li>
             <li><strong>Date:</strong> {dateNice} at {String(booking!.start_time).slice(0, 5)}</li>
             <li><strong>Paid now:</strong> {fmt(paidPence)}</li>
             {booking!.status === 'deposit_paid' && booking!.balance_pence > 0 && (
-              <li><strong>Balance due on/after session:</strong> {fmt(booking!.balance_pence)} — we'll send a payment link</li>
+              <li><strong>Balance due on/after session:</strong> {fmt(booking!.balance_pence)}. We'll send a payment link</li>
             )}
             {booking!.location_type === 'on_location' ? (
-              <li><strong>Where:</strong> On location — {booking!.address}</li>
+              <li><strong>Where:</strong> On location, {booking!.address}</li>
             ) : (
               <li>
-                <strong>Where:</strong> {studio.name} —
+                <strong>Where:</strong> {studio.name},
                 <a href={MAPS_URL} target="_blank" rel="noopener"> {studio.address}</a>
               </li>
             )}
@@ -94,7 +94,7 @@ const isBalancePayment = booking && paidPence > 0 && booking.status === 'deposit
           <h2 class="display bs__next-title">What happens next</h2>
           <p>
             Stripe has emailed your receipt. Arrive 5 minutes early; bring your outfits
-            pressed and on hangers. Questions or changes — email
+            pressed and on hangers. Questions or changes, email
             <a href="mailto:bookings@chace.studio">bookings@chace.studio</a> with your reference.
           </p>
         </div>

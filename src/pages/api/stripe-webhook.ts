@@ -95,7 +95,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
       await query(
         `UPDATE bookings SET status = 'cancelled',
-           notes = COALESCE(notes || E'\n', '') || '[CONFLICT — slot double-booked during payment; auto-refunded. Contact customer to rebook.]',
+           notes = COALESCE(notes || E'\n', '') || '[CONFLICT: slot double-booked during payment, auto-refunded. Contact customer to rebook.]',
            stripe_payment_intent = COALESCE($2, stripe_payment_intent),
            promo_code = COALESCE($3, promo_code)
          WHERE id = $1`,
@@ -103,8 +103,8 @@ export const POST: APIRoute = async ({ request }) => {
       );
       await sendEmail(
         booking.email,
-        `CHACE STUDIOS — booking ${booking.ref}: slot no longer available`,
-        `<p>Hi ${booking.name},</p><p>Unfortunately the slot you booked was taken moments before your payment completed. Your payment has been refunded in full automatically.</p><p>Please rebook at a new time — we'd love to see you: <a href="https://chace.studio/packages">chace.studio/packages</a>.</p><p>— CHACE STUDIOS</p>`
+        `CHACE STUDIOS booking ${booking.ref}: slot no longer available`,
+        `<p>Hi ${booking.name},</p><p>Unfortunately the slot you booked was taken moments before your payment completed. Your payment has been refunded in full automatically.</p><p>Please rebook at a new time, we'd love to see you: <a href="https://chace.studio/packages">chace.studio/packages</a>.</p><p>CHACE STUDIOS</p>`
       );
       return new Response('ok', { status: 200 });
     }
@@ -146,8 +146,8 @@ export const POST: APIRoute = async ({ request }) => {
     );
     await sendEmail(
       booking.email,
-      `CHACE STUDIOS — balance received for ${booking.ref}`,
-      `<p>Hi ${booking.name},</p><p>We've received your balance payment of £${(amountTotal / 100).toFixed(2)} for booking <strong>${booking.ref}</strong>. ${newBalance === 0 ? 'Your booking is now paid in full — see you at the studio!' : `Remaining balance: £${(newBalance / 100).toFixed(2)}.`}</p><p>— CHACE STUDIOS</p>`
+      `CHACE STUDIOS balance received for ${booking.ref}`,
+      `<p>Hi ${booking.name},</p><p>We've received your balance payment of £${(amountTotal / 100).toFixed(2)} for booking <strong>${booking.ref}</strong>. ${newBalance === 0 ? 'Your booking is now paid in full. See you at the studio.' : `Remaining balance: £${(newBalance / 100).toFixed(2)}.`}</p><p>CHACE STUDIOS</p>`
     );
   }
 

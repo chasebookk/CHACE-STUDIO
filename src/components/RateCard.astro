@@ -10,16 +10,34 @@ interface Props {
   tagline?: string;
   prices: Price[];
   bullets: string[];
+  /** Highlighted line rendered under the prices. */
+  highlight?: string;
+  /** Show the quiet "More options available at checkout" link. */
+  moreOptions?: boolean;
   ctaLabel?: string;
   ctaHref?: string;
 }
 
-const { title, image, tagline, prices, bullets, ctaLabel = 'Book', ctaHref } = Astro.props;
+const {
+  title,
+  image,
+  tagline,
+  prices,
+  bullets,
+  highlight,
+  moreOptions = false,
+  ctaLabel = 'Book',
+  ctaHref,
+} = Astro.props;
+
+// Cards never show more than their two headline tiers; the rest live in the
+// Options dropdown on the booking form.
+const headline = prices.slice(0, 2);
 ---
 
 <article class="rcard">
   <div class="rcard__media">
-    <img class="rcard__img" src={image} alt={`${title} — CHACE STUDIOS`} loading="lazy" decoding="async" />
+    <img class="rcard__img" src={image} alt={`${title}, CHACE STUDIOS`} loading="lazy" decoding="async" />
   </div>
 
   <h3 class="display rcard__title">{title}</h3>
@@ -27,13 +45,19 @@ const { title, image, tagline, prices, bullets, ctaLabel = 'Book', ctaHref } = A
   {tagline && <p class="rcard__tagline">{tagline}</p>}
 
   <div class="rcard__prices">
-    {prices.map((p) => (
+    {headline.map((p) => (
       <p class="rcard__price">
         <span class="display rcard__amount">{p.amount}</span>
         <span class="rcard__unit">{p.label}</span>
       </p>
     ))}
   </div>
+
+  {moreOptions && (
+    <a href="#book" class="rcard__more" data-package={title}>More options available at checkout</a>
+  )}
+
+  {highlight && <p class="rcard__highlight">{highlight}</p>}
 
   <div class="panel-dark rcard__panel">
     <ul>
@@ -124,6 +148,38 @@ const { title, image, tagline, prices, bullets, ctaLabel = 'Book', ctaHref } = A
     font-size: 12.5px;
     line-height: 17px;
     color: var(--ink-50);
+  }
+
+  /* Quiet brand line: signals the full menu without cluttering the card */
+  .rcard__more {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--orange);
+    border-bottom: 1px solid rgba(255, 106, 0, 0.35);
+    padding-bottom: 2px;
+    width: fit-content;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .rcard__more:hover {
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .rcard__highlight {
+    padding: 11px 14px;
+    margin: 0 0 14px;
+    background: rgba(255, 166, 0, 0.1);
+    border-left: 3px solid var(--orange);
+    border-radius: 8px;
+    font-size: 12.5px;
+    line-height: 19px;
+    color: var(--ink);
   }
 
   .rcard__panel {

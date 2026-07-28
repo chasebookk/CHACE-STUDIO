@@ -25,7 +25,7 @@ function durationMinutes(b: BookingRow): number {
 /** Where the shoot happens, as a single human-readable line. */
 export function locationLine(b: BookingRow): string {
   if (b.location_type === 'on_location') {
-    return `On location — ${b.address || 'address to be confirmed'}`;
+    return `On location, ${b.address || 'address to be confirmed'}`;
   }
   const studio = getStudio(b.studio_id);
   return studio ? `${studio.name}, ${studio.address}` : '5 Pocklingtons Walk, Leicester LE1 6BT, UK';
@@ -36,13 +36,13 @@ function packageTitle(b: BookingRow): string {
 }
 
 function icsFor(b: BookingRow): Attachment {
-  const title = `CHACE — ${packageTitle(b)} — ${b.name}`;
+  const title = `CHACE: ${packageTitle(b)}, ${b.name}`;
   return {
     filename: `chace-${b.ref}.ics`,
     content: buildIcs({
       uid: `${b.ref}@chace.studio`,
       title,
-      description: `Booking reference ${b.ref}. ${packageTitle(b)} — ${b.tier_label}. Questions: ${OWNER_EMAIL}`,
+      description: `Booking reference ${b.ref}. ${packageTitle(b)}, ${b.tier_label}. Questions: ${OWNER_EMAIL}`,
       location: locationLine(b),
       date: String(b.date).slice(0, 10),
       startTime: hhmm(b.start_time),
@@ -73,7 +73,7 @@ const row = (label: string, value: string) => `
 
 /** Full shoot details to the studio owner. */
 async function notifyOwner(b: BookingRow): Promise<boolean> {
-  const subject = `New booking — ${packageTitle(b)} — ${String(b.date).slice(0, 10)} ${hhmm(b.start_time)}`;
+  const subject = `New booking: ${packageTitle(b)}, ${String(b.date).slice(0, 10)} ${hhmm(b.start_time)}`;
 
   const body = wrap(`
     <h1 style="margin:0 0 6px;font-size:20px;color:#111">New booking confirmed</h1>
@@ -81,19 +81,19 @@ async function notifyOwner(b: BookingRow): Promise<boolean> {
     <table style="width:100%;border-collapse:collapse">
       ${row('Client', b.name)}
       ${row('Email', `<a href="mailto:${b.email}" style="color:#111">${b.email}</a>`)}
-      ${row('Phone', b.phone || '—')}
+      ${row('Phone', b.phone || 'Not given')}
       ${row('Package', packageTitle(b))}
       ${row('Option', b.tier_label)}
       ${row('Date', longDate(b.date))}
       ${row('Time', `${hhmm(b.start_time)}–${hhmm(b.end_time)} (${durationMinutes(b)} min)`)}
       ${row('Where', locationLine(b))}
       ${row('Paid', money(b.paid_pence))}
-      ${row('Balance due', b.balance_pence > 0 ? `${money(b.balance_pence)} — collect on/after the session` : 'None — paid in full')}
-      ${row('Promo code', b.promo_code || '—')}
+      ${row('Balance due', b.balance_pence > 0 ? `${money(b.balance_pence)}, collect on or immediately after the session` : 'None, paid in full')}
+      ${row('Promo code', b.promo_code || 'None')}
     </table>
     <div style="margin-top:20px;padding:16px;background:#faf7f2;border-radius:10px">
       <div style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Client notes</div>
-      <div style="color:#111;font-size:14px;white-space:pre-wrap">${b.notes ? escapeHtml(b.notes) : '—'}</div>
+      <div style="color:#111;font-size:14px;white-space:pre-wrap">${b.notes ? escapeHtml(b.notes) : 'None'}</div>
     </div>`);
 
   return sendEmail(ownerNotifyAddress(), subject, body, [icsFor(b)]);
@@ -101,23 +101,23 @@ async function notifyOwner(b: BookingRow): Promise<boolean> {
 
 /** Branded confirmation to the client. */
 async function notifyClient(b: BookingRow): Promise<boolean> {
-  const subject = `Your CHACE STUDIOS booking is confirmed — ${b.ref}`;
+  const subject = `Your CHACE STUDIOS booking is confirmed, ${b.ref}`;
 
   const balanceBlock =
     b.balance_pence > 0
       ? `<div style="margin-top:18px;padding:16px;background:#fff6e8;border-radius:10px;color:#5a3b00;font-size:14px">
            <strong>Balance to come:</strong> ${money(b.balance_pence)} is due on or after your session.
-           We'll send you a secure payment link — nothing to do right now.
+           We'll send you a secure payment link. Nothing to do right now.
          </div>`
       : '';
 
   const body = wrap(`
     <h1 style="margin:0 0 6px;font-size:20px;color:#111">You're booked in, ${escapeHtml(b.name.split(' ')[0])}.</h1>
     <p style="margin:0 0 20px;color:#666;font-size:14px">
-      Reference <strong style="color:#111">${b.ref}</strong> — quote this in any message to us.
+      Reference <strong style="color:#111">${b.ref}</strong>. Quote this in any message to us.
     </p>
     <table style="width:100%;border-collapse:collapse">
-      ${row('What', `${packageTitle(b)} — ${b.tier_label}`)}
+      ${row('What', `${packageTitle(b)}, ${b.tier_label}`)}
       ${row('When', `${longDate(b.date)}<br>${hhmm(b.start_time)}–${hhmm(b.end_time)}`)}
       ${row('Where', locationLine(b))}
       ${row('Paid today', money(b.paid_pence))}
@@ -126,7 +126,7 @@ async function notifyClient(b: BookingRow): Promise<boolean> {
     <div style="margin-top:20px">
       <div style="color:#111;font-size:15px;font-weight:700;margin-bottom:8px">How to prepare</div>
       <ul style="margin:0;padding-left:18px;color:#444;font-size:14px;line-height:22px">
-        <li>Arrive 5 minutes early so we start on time — sessions run to the slot.</li>
+        <li>Arrive 5 minutes early so we start on time, sessions run to the slot.</li>
         <li>Bring outfits pressed and on hangers; add a spare option if you're unsure.</li>
         <li>Send any references or mood-board links ahead of the day.</li>
         <li>Need to move your slot? Email us as early as you can.</li>

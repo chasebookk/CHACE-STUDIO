@@ -47,7 +47,7 @@ const statusLabel: Record<string, string> = {
 
 const where = (b: BookingRow) =>
   b.location_type === 'on_location'
-    ? `On location — ${b.address || 'TBC'}`
+    ? `On location, ${b.address || 'TBC'}`
     : (getStudio(b.studio_id)?.name ?? 'CHACE STUDIOS');
 
 const pkgTitle = (b: BookingRow) => getPackage(b.package_slug)?.title ?? b.package_slug;

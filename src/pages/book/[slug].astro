@@ -42,7 +42,7 @@ const tierTerms = bookable.tiers.map((t) => ({
 // recurring package). Say so rather than leaving a client hunting for it.
 const hasOffPlatformTiers = card.prices.length > bookable.tiers.length;
 
-const title = `${card.title} — Book with CHACE STUDIOS`;
+const title = `${card.title}, Book with CHACE STUDIOS`;
 ---
 
 <Base title={title} description={card.tagline}>
@@ -54,7 +54,7 @@ const title = `${card.title} — Book with CHACE STUDIOS`;
       <div class="bk-hero__grid">
         <div class="bk-hero__copy">
           {preparedFor && <p class="bk-prepared">Prepared for {preparedFor}</p>}
-          <p class="eyebrow bk-eyebrow">— Booking proposal</p>
+          <p class="eyebrow bk-eyebrow">Booking proposal</p>
           <h1 class="display bk-title">{card.title}</h1>
           <p class="bk-tagline">{card.tagline}</p>
 
@@ -105,7 +105,7 @@ const title = `${card.title} — Book with CHACE STUDIOS`;
           </div>
           {hasOffPlatformTiers && (
             <p class="bk-where">
-              Recurring and bespoke arrangements aren't bookable online — email
+              Recurring and bespoke arrangements aren't bookable online. Email
               <a href="mailto:bookings@chace.studio"> bookings@chace.studio</a> and we'll set them up for you.
             </p>
           )}
@@ -131,13 +131,13 @@ const title = `${card.title} — Book with CHACE STUDIOS`;
     <BookingWidget
       lockedSlug={card.slug}
       heading="Book your session"
-      intro="Choose a date and time below and pay securely — card, Apple Pay, Google Pay, Klarna, PayPal and Pay by Bank. Your slot is held for 30 minutes while you pay."
+      intro="Choose a date and time below and pay securely: card, Apple Pay, Google Pay, Klarna, PayPal and Pay by Bank. Your slot is held for 30 minutes while you pay."
       note={note || undefined}
     />
 
     <p class="bk-foot sec-light">
       Questions before you book? Email
-      <a href="mailto:bookings@chace.studio">bookings@chace.studio</a> —
+      <a href="mailto:bookings@chace.studio">bookings@chace.studio</a>,
       or <a href="/packages">see all packages</a>.
     </p>
   </main>

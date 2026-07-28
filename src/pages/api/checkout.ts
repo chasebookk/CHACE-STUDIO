@@ -10,6 +10,7 @@ import {
 import { getPool } from '../../lib/db';
 import { getStripe } from '../../lib/stripe';
 import { toMin, toHHMM, slotIsFree, generateRef } from '../../lib/availability';
+import { isReturningPodcastClient } from '../../lib/returning';
 import { siteUrl } from '../../lib/env';
 
 export const prerender = false;
@@ -60,7 +61,17 @@ export const POST: APIRoute = async ({ request }) => {
 
   const startMin = toMin(String(time));
   const endMin = startMin + tier.durationMin;
-  const amountPence = chargeNowPence(tier);
+
+  // Price comes from config, never from the client. The returning-podcast
+  // rate is re-checked here so it cannot be forced from the browser.
+  let totalPence = tier.pricePence;
+  let tierLabel = tier.label;
+  if (pkg.returningPricePence && (await isReturningPodcastClient(String(email), phone ? String(phone) : null))) {
+    totalPence = pkg.returningPricePence;
+    tierLabel = `${tier.label}, returning client rate`;
+  }
+
+  const amountPence = chargeNowPence(tier, totalPence);
   const kind = tier.charge === 'deposit' ? 'deposit' : 'full';
 
   const pool = getPool();
@@ -76,7 +87,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (!(await slotIsFree(String(date), startMin, tier.durationMin))) {
       await client.query('ROLLBACK');
-      return json({ error: 'slot_taken', message: 'That slot has just been taken — please pick another time.' }, 409);
+      return json({ error: 'slot_taken', message: 'That slot has just been taken. Please pick another time.' }, 409);
     }
 
     ref = generateRef();
@@ -91,9 +102,9 @@ export const POST: APIRoute = async ({ request }) => {
       [
         ref,
         pkg.slug,
-        tier.label,
-        tier.pricePence,
-        tier.charge === 'deposit' ? tier.pricePence - amountPence : 0,
+        tierLabel,
+        totalPence,
+        tier.charge === 'deposit' ? totalPence - amountPence : 0,
         String(name).slice(0, 200),
         String(email).slice(0, 200),
         phone ? String(phone).slice(0, 50) : null,
@@ -136,7 +147,7 @@ export const POST: APIRoute = async ({ request }) => {
             currency: 'gbp',
             unit_amount: amountPence,
             product_data: {
-              name: `${pkg.title} — ${tier.label} — ${chargeLabel}`,
+              name: `${pkg.title}, ${tierLabel}, ${chargeLabel}`,
               description: `${date} at ${toHHMM(startMin)} · ref ${ref}`,
             },
           },
@@ -163,6 +174,6 @@ export const POST: APIRoute = async ({ request }) => {
     await pool
       .query(`UPDATE bookings SET status = 'expired' WHERE id = $1`, [bookingId])
       .catch(() => {});
-    return json({ error: 'Payment provider error — please try again.' }, 502);
+    return json({ error: 'Payment provider error. Please try again.' }, 502);
   }
 };

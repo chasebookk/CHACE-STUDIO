@@ -13,7 +13,7 @@ interface Props {
 const {
   lockedSlug,
   heading = 'Book a Shoot',
-  intro = "Pick a package, choose an available time and pay securely — card, Apple Pay, Google Pay, Klarna, PayPal and Pay by Bank. Your slot is held for 30 minutes while you pay. Got a promo code? There's a box for it on the payment page.",
+  intro = "Pick a package, choose an available time and pay securely: card, Apple Pay, Google Pay, Klarna, PayPal and Pay by Bank. Your slot is held for 30 minutes while you pay. Got a promo code? There's a box for it on the payment page.",
   note,
 } = Astro.props;
 
@@ -26,10 +26,15 @@ const bookingData = offered.map((p) => ({
   slug: p.slug,
   title: p.title,
   studioOnly: !!p.studioOnly,
+  /** Packages with an automatic returning-client rate ask the server for it. */
+  hasReturningRate: !!p.returningPricePence,
   tiers: p.tiers.map((t) => ({
     id: t.id,
     label: t.label,
+    includes: t.includes ?? '',
     pricePence: t.pricePence,
+    listPence: t.listPence ?? null,
+    discountPct: t.discountPct ?? null,
     charge: t.charge,
     fromPrice: !!t.fromPrice,
   })),
@@ -38,7 +43,7 @@ const bookingData = offered.map((p) => ({
 
 <section id="book" class="pk-book sec-light">
   <div class="pk-book__inner">
-    <p class="eyebrow reveal">— Book &amp; pay online</p>
+    <p class="eyebrow reveal">Book &amp; pay online</p>
     <h2 class="display pk-book__title reveal">{heading}</h2>
     <p class="pk-book__sub reveal">{intro}</p>
 
@@ -63,6 +68,7 @@ const bookingData = offered.map((p) => ({
       </div>
 
       <p class="bw-price pk-field--full" id="bw-price"></p>
+      <p class="bw-rate pk-field--full" id="bw-rate-note" role="status" aria-live="polite" hidden></p>
 
       <div class="pk-field pk-field--full">
         <span class="pk-label">Pick a date <span>*</span></span>
@@ -117,7 +123,7 @@ const bookingData = offered.map((p) => ({
         </div>
         <select class="pk-input pk-select" id="bw-studio" hidden aria-label="Choose a studio">
           {STUDIOS.map((s) => (
-            <option value={s.id}>{s.name} — {s.address}</option>
+            <option value={s.id}>{s.name}, {s.address}</option>
           ))}
         </select>
       </div>
@@ -438,6 +444,26 @@ const bookingData = offered.map((p) => ({
     display: none;
   }
 
+  .bw-rate {
+    margin: -8px 0 0;
+    padding: 11px 15px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.04);
+    border-left: 3px solid rgba(0, 0, 0, 0.2);
+    font-size: 13.5px;
+    line-height: 20px;
+    color: var(--ink-60);
+  }
+  .bw-rate[hidden] {
+    display: none;
+  }
+  .bw-rate.bw-rate--welcome {
+    background: rgba(255, 166, 0, 0.12);
+    border-left-color: var(--orange);
+    color: var(--ink);
+    font-weight: 600;
+  }
+
   .bw-status--error {
     color: var(--red);
   }
@@ -514,6 +540,7 @@ const bookingData = offered.map((p) => ({
   const studioSel = $<HTMLSelectElement>('bw-studio');
   const addressWrap = $('bw-address-wrap');
   const summaryEl = $('bw-summary');
+  const rateNoteEl = $('bw-rate-note');
   const payBtn = $<HTMLButtonElement>('bw-pay');
   const statusEl = $('bw-status');
 
@@ -544,21 +571,87 @@ const bookingData = offered.map((p) => ({
   }
 
   function renderTiers() {
+    // The dropdown is the full menu, so each option carries its own price.
     tierSelect.innerHTML = currentPkg()
-      .tiers.map((t) => `<option value="${t.id}">${t.label}</option>`)
+      .tiers.map((t) => {
+        const bits = [t.label, fmt(t.pricePence)];
+        if (t.includes) bits.push(t.includes);
+        return `<option value="${t.id}">${bits.join(', ')}</option>`;
+      })
       .join('');
     renderPrice();
+  }
+
+  /** The rate actually charged, once any returning-client rate is known. */
+  function effectivePrice(t: typeof packages[0]['tiers'][0]): number {
+    return returningPricePence != null ? returningPricePence : t.pricePence;
   }
 
   function renderPrice() {
     const t = currentTier();
     const from = t.fromPrice ? 'From ' : '';
-    if (t.charge === 'deposit') {
-      const dep = Math.round(t.pricePence * 0.8);
-      priceEl.innerHTML = `${from}<strong>${fmt(t.pricePence)}</strong> — pay <strong>${fmt(dep)}</strong> deposit today (80%), ${fmt(t.pricePence - dep)} balance due on/after your session.`;
+    const total = effectivePrice(t);
+    const parts: string[] = [];
+
+    // Spell the saving out rather than showing only the final number.
+    if (returningPricePence != null) {
+      parts.push(`<strong>${fmt(total)}</strong> per episode, your returning client rate.`);
+    } else if (t.discountPct && t.listPence) {
+      parts.push(
+        `${t.label}, ${fmt(t.listPence)}, less ${t.discountPct}%, you pay <strong>${fmt(total)}</strong>. That saves you ${fmt(t.listPence - total)}.`
+      );
     } else {
-      priceEl.innerHTML = `${from}<strong>${fmt(t.pricePence)}</strong> — full payment today.`;
+      parts.push(`${from}<strong>${fmt(total)}</strong>`);
     }
+
+    if (t.charge === 'deposit') {
+      const dep = Math.round(total * 0.8);
+      parts.push(
+        `Pay <strong>${fmt(dep)}</strong> today, that is the 80% deposit. The remaining ${fmt(total - dep)} is due on or immediately after your session.`
+      );
+    } else {
+      parts.push('Paid in full today.');
+    }
+
+    priceEl.innerHTML = parts.join(' ');
+  }
+
+  /**
+   * Podcast only: ask the server whether this person has paid for a session
+   * before. Advisory, the same check runs again inside /api/checkout.
+   */
+  let returningPricePence: number | null = null;
+  let rateLookupToken = 0;
+
+  async function refreshReturningRate() {
+    const pkg = currentPkg();
+    if (!pkg.hasReturningRate) {
+      returningPricePence = null;
+      rateNoteEl.hidden = true;
+      renderPrice();
+      return;
+    }
+
+    const email = $<HTMLInputElement>('bw-email').value.trim();
+    const phone = $<HTMLInputElement>('bw-phone').value.trim();
+    const token = ++rateLookupToken;
+
+    try {
+      const res = await fetch(
+        `/api/podcast-rate?email=${encodeURIComponent(email)}&phone=${encodeURIComponent(phone)}`
+      );
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (token !== rateLookupToken) return; // a newer lookup won
+      returningPricePence = data.returning ? data.pricePence : null;
+      rateNoteEl.textContent = data.message;
+      rateNoteEl.classList.toggle('bw-rate--welcome', !!data.returning);
+      rateNoteEl.hidden = false;
+    } catch {
+      returningPricePence = null;
+      rateNoteEl.hidden = true;
+    }
+    renderPrice();
   }
 
   async function loadMonth() {
@@ -577,7 +670,7 @@ const bookingData = offered.map((p) => ({
       available = (await res.json()).available;
     } catch {
       daysEl.innerHTML =
-        '<span class="bw-cal__loading">Could not load availability — refresh to retry.</span>';
+        '<span class="bw-cal__loading">Could not load availability. Refresh to retry.</span>';
       return;
     }
 
@@ -660,7 +753,7 @@ const bookingData = offered.map((p) => ({
       const { slots } = await res.json();
       if (!slots.length) {
         timesEl.innerHTML =
-          '<span class="bw-cal__loading">No free times left on this day — pick another date.</span>';
+          '<span class="bw-cal__loading">No free times left on this day. Pick another date.</span>';
         selectedTime = null;
         renderSummary();
         return;
@@ -684,7 +777,7 @@ const bookingData = offered.map((p) => ({
       paintTimeSelection();
       renderSummary();
     } catch {
-      timesEl.innerHTML = '<span class="bw-cal__loading">Could not load times — try again.</span>';
+      timesEl.innerHTML = '<span class="bw-cal__loading">Could not load times. Try again.</span>';
     }
   }
 
@@ -718,6 +811,7 @@ const bookingData = offered.map((p) => ({
     renderTiers();
     renderLocationFields();
     resetSelection();
+    refreshReturningRate();
   });
   tierSelect.addEventListener('change', () => {
     renderPrice();
@@ -742,6 +836,16 @@ const bookingData = offered.map((p) => ({
   });
 
   locationSel.addEventListener('change', renderLocationFields);
+
+  // Look the returning rate up as contact details are entered, debounced so
+  // we are not querying on every keystroke.
+  let rateDebounce: ReturnType<typeof setTimeout> | undefined;
+  const scheduleRateLookup = () => {
+    clearTimeout(rateDebounce);
+    rateDebounce = setTimeout(refreshReturningRate, 500);
+  };
+  $<HTMLInputElement>('bw-email').addEventListener('input', scheduleRateLookup);
+  $<HTMLInputElement>('bw-phone').addEventListener('input', scheduleRateLookup);
 
   // Rate-card "Book" buttons preselect their package and scroll here.
   const titleToSlug = new Map(packages.map((p) => [p.title, p.slug]));
@@ -800,19 +904,20 @@ const bookingData = offered.map((p) => ({
         return;
       }
       if (res.status === 409) {
-        setStatus(data.message ?? 'That slot was just taken — pick another time.', true);
+        setStatus(data.message ?? 'That slot was just taken. Pick another time.', true);
         selectedTime = null;
         if (selectedDate) selectDate(selectedDate);
       } else {
-        setStatus(data.error ?? 'Something went wrong — please try again.', true);
+        setStatus(data.error ?? 'Something went wrong. Please try again.', true);
       }
     } catch {
-      setStatus('Network error — please try again.', true);
+      setStatus('Network error. Please try again.', true);
     }
     payBtn.disabled = false;
   });
 
   renderPackages();
   renderLocationFields();
+  refreshReturningRate();
   loadMonth();
 </script>

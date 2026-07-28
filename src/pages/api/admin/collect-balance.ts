@@ -34,7 +34,7 @@ export const POST: APIRoute = async ({ request }) => {
           currency: 'gbp',
           unit_amount: booking.balance_pence,
           product_data: {
-            name: `CHACE STUDIOS — balance for ${booking.ref}`,
+            name: `CHACE STUDIOS balance for ${booking.ref}`,
             description: `${booking.tier_label} · ${booking.date} ${String(booking.start_time).slice(0, 5)}`,
           },
         },
@@ -54,8 +54,8 @@ export const POST: APIRoute = async ({ request }) => {
 
   await sendEmail(
     booking.email,
-    `CHACE STUDIOS — balance payment link for ${booking.ref}`,
-    `<p>Hi ${booking.name},</p><p>Here's the secure link to pay the remaining £${(booking.balance_pence / 100).toFixed(2)} balance on your booking <strong>${booking.ref}</strong>:</p><p><a href="${session.url}">Pay balance</a></p><p>— CHACE STUDIOS</p>`
+    `CHACE STUDIOS balance payment link for ${booking.ref}`,
+    `<p>Hi ${booking.name},</p><p>Here's the secure link to pay the remaining £${(booking.balance_pence / 100).toFixed(2)} balance on your booking <strong>${booking.ref}</strong>:</p><p><a href="${session.url}">Pay balance</a></p><p>CHACE STUDIOS</p>`
   );
 
   return new Response(null, { status: 303, headers: { Location: '/admin' } });
