@@ -78,7 +78,11 @@ const hourId = (h: number) => (h === 1 ? '1-hour' : `${h}-hours`);
 const lookLabel = (n: number) => (n === 1 ? '1 look' : `${n} looks`);
 const lookId = (n: number) => (n === 1 ? '1-look' : `${n}-looks`);
 
-/** Family Shoot: £250 per look, 15% off above one look. Dropdown offers 1 to 4. */
+/**
+ * Family Shoot: £250 per look, 15% off above one look. Dropdown offers 1 to 4.
+ * Each look needs its own hour of studio time, so the booking blocks the
+ * calendar for the full session rather than a single hour.
+ */
 function familyTiers(): Tier[] {
   return [1, 2, 3, 4].map((n) => {
     const list = n * 25000;
@@ -91,7 +95,7 @@ function familyTiers(): Tier[] {
       discountPct: pct || undefined,
       pricePence: pct ? discounted(list, pct) : list,
       charge: n > 1 ? 'deposit' : 'full',
-      durationMin: 60,
+      durationMin: n * 60,
     } satisfies Tier;
   });
 }
