@@ -5,12 +5,15 @@ interface Props {
   title?: string;
   description?: string;
   ogImage?: string;
+  /** Private pages pass "noindex, nofollow". */
+  robots?: string;
 }
 
 const {
   title = 'Photography Studio Leicester | CHACE STUDIOS',
   description = 'CHACE STUDIOS is a photography & media studio in Leicester: portraits, weddings, events, video and podcast production under one roof.',
   ogImage = '/assets/img/portfolio/portraits/portraits-03.jpg',
+  robots = 'index, follow',
 } = Astro.props;
 
 const ogImageUrl = new URL(ogImage, Astro.url);
@@ -22,7 +25,7 @@ const ogImageUrl = new URL(ogImage, Astro.url);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content={robots} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />

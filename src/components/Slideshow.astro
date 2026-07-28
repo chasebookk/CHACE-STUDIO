@@ -1,0 +1,145 @@
+---
+interface Props {
+  images: string[];
+  caption?: string;
+  /** How long each image stays. */
+  holdMs?: number;
+  /** Crossfade duration. */
+  fadeMs?: number;
+}
+
+const { images, caption, holdMs = 3000, fadeMs = 600 } = Astro.props;
+const [first, ...rest] = images;
+// Unique id so several panels can coexist on one page.
+const uid = `ss-${Math.random().toString(36).slice(2, 9)}`;
+---
+
+<figure class="ss" style={`--fade-ms:${fadeMs}ms`}>
+  <div class="ss__frame" data-slideshow={uid} data-hold={holdMs} data-rest={JSON.stringify(rest)}>
+    <!-- Two stacked layers alternate opacity, so there is never a hard cut. -->
+    <img class="ss__img is-front" src={first} alt="" aria-hidden="true" decoding="async" />
+    <img class="ss__img" alt="" aria-hidden="true" decoding="async" />
+  </div>
+  {caption && <figcaption class="ss__caption">{caption}</figcaption>}
+</figure>
+
+<style>
+  .ss {
+    margin: 0;
+  }
+
+  .ss__frame {
+    position: relative;
+    aspect-ratio: 1;
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--radius);
+    background: var(--card);
+  }
+
+  .ss__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    opacity: 0;
+    transition: opacity var(--fade-ms, 600ms) ease-in-out;
+  }
+  .ss__img.is-front {
+    opacity: 1;
+  }
+
+  .ss__caption {
+    margin-top: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ss__img {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-slideshow]').forEach((frame) => {
+    const layers = Array.from(frame.querySelectorAll<HTMLImageElement>('.ss__img'));
+    if (layers.length < 2) return;
+
+    const rest: string[] = JSON.parse(frame.dataset.rest || '[]');
+    const holdMs = Number(frame.dataset.hold || 3000);
+    if (rest.length === 0) return;
+
+    // Reduced motion: the first image simply stays.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const fadeMs =
+      parseFloat(getComputedStyle(frame).getPropertyValue('--fade-ms')) || 600;
+
+    let front = 0;
+    let cursor = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let running = false;
+
+    const fetchImage = (src: string) =>
+      new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = src;
+      });
+
+    const schedule = (delay: number) => {
+      clearTimeout(timer);
+      timer = setTimeout(advance, delay);
+    };
+
+    async function advance() {
+      if (document.hidden) {
+        running = false;
+        return;
+      }
+      const src = rest[cursor];
+      cursor = (cursor + 1) % rest.length;
+
+      try {
+        // Swap only once the bytes are in, so the layer never fades up empty.
+        await fetchImage(src);
+        const back = layers[1 - front];
+        back.src = src;
+        if (back.decode) await back.decode().catch(() => {});
+        back.classList.add('is-front');
+        layers[front].classList.remove('is-front');
+        front = 1 - front;
+      } catch {
+        /* skip a missing image and keep going */
+      }
+      fetchImage(rest[cursor]).catch(() => {});
+      schedule(holdMs + fadeMs);
+    }
+
+    fetchImage(rest[0])
+      .then(() => {
+        running = true;
+        schedule(holdMs);
+      })
+      .catch(() => {});
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearTimeout(timer);
+        running = false;
+      } else if (!running) {
+        running = true;
+        schedule(holdMs);
+      }
+    });
+  });
+</script>

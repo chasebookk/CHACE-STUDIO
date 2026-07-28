@@ -4,6 +4,8 @@ import { PACKAGES as BOOKABLE, STUDIOS } from '../config/booking';
 interface Props {
   /** Lock the widget to one package (shareable /book/[slug] pages). */
   lockedSlug?: string;
+  /** Lock further to a single tier (private client quotes). */
+  lockedTierId?: string;
   heading?: string;
   intro?: string;
   /** Optional personalised note rendered above the form. */
@@ -12,6 +14,7 @@ interface Props {
 
 const {
   lockedSlug,
+  lockedTierId,
   heading = 'Book a Shoot',
   intro = "Pick a package, choose an available time and pay securely: card, Apple Pay, Google Pay, Klarna, PayPal and Pay by Bank. Your slot is held for 30 minutes while you pay. Got a promo code? There's a box for it on the payment page.",
   note,
@@ -21,6 +24,14 @@ const {
 // select cannot offer anything else even if it were revealed.
 const offered = lockedSlug ? BOOKABLE.filter((p) => p.slug === lockedSlug) : BOOKABLE;
 const lockedTitle = lockedSlug ? BOOKABLE.find((p) => p.slug === lockedSlug)?.title : undefined;
+const lockedTier = lockedTierId
+  ? offered[0]?.tiers.find((t) => t.id === lockedTierId)
+  : undefined;
+// A locked tier is the only one the widget is told about, so the select
+// cannot offer anything else even if it were revealed.
+const lockedTierLabel = lockedTier
+  ? [lockedTier.label, lockedTier.includes].filter(Boolean).join(', ')
+  : undefined;
 
 const bookingData = offered.map((p) => ({
   slug: p.slug,
@@ -28,7 +39,7 @@ const bookingData = offered.map((p) => ({
   studioOnly: !!p.studioOnly,
   /** Packages with an automatic returning-client rate ask the server for it. */
   hasReturningRate: !!p.returningPricePence,
-  tiers: p.tiers.map((t) => ({
+  tiers: (lockedTier && p.slug === lockedSlug ? [lockedTier] : p.tiers).map((t) => ({
     id: t.id,
     label: t.label,
     includes: t.includes ?? '',
@@ -62,10 +73,17 @@ const bookingData = offered.map((p) => ({
         </div>
       )}
 
-      <div class="pk-field">
+      <div class="pk-field" id="bw-tier-wrap" hidden={!!lockedTier}>
         <label class="pk-label" for="bw-tier">Option <span>*</span></label>
         <select class="pk-input pk-select" id="bw-tier"></select>
       </div>
+
+      {lockedTier && (
+        <div class="pk-field">
+          <span class="pk-label">Option</span>
+          <div class="bw-locked">{lockedTierLabel}</div>
+        </div>
+      )}
 
       <p class="bw-price pk-field--full" id="bw-price"></p>
       <p class="bw-rate pk-field--full" id="bw-rate-note" role="status" aria-live="polite" hidden></p>
