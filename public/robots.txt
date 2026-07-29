@@ -5,6 +5,7 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 Disallow: /quote/
+Disallow: /book/
 Disallow: /booking/
 
 Sitemap: https://chace.studio/sitemap.xml

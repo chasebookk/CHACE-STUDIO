@@ -44,8 +44,18 @@ CREATE TABLE IF NOT EXISTS processed_events (
   booking_id INT,
   kind TEXT,
   amount_pence INT NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now()
+  processed_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Rename for databases created before processed_at was settled on.
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_name = 'processed_events' AND column_name = 'created_at'
+  ) THEN
+    ALTER TABLE processed_events RENAME COLUMN created_at TO processed_at;
+  END IF;
+END $$;
 
 -- A checkout session can only ever be completed once, so guard on it too in
 -- case Stripe ever delivers the same completion under a new event id.

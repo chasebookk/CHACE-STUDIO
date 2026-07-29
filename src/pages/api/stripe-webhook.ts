@@ -38,6 +38,30 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const session = event.data.object as Stripe.Checkout.Session;
+
+  // Idempotency gate, before anything else touches the database, Stripe or
+  // email. Stripe retries on any non-2xx or timeout, so a slow send would
+  // otherwise replay the whole handler. Claiming the event id first means a
+  // repeat delivery stops here, which is what prevents the balance branch
+  // double-counting and duplicate confirmation emails.
+  const claim = await query(
+    `INSERT INTO processed_events (event_id, session_id, booking_id, kind, amount_pence)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT DO NOTHING
+     RETURNING event_id`,
+    [
+      event.id,
+      session.id,
+      Number(session.metadata?.booking_id) || null,
+      session.metadata?.kind ?? null,
+      session.amount_total ?? 0,
+    ]
+  );
+  if (claim.rowCount === 0) {
+    console.log(`[webhook] event ${event.id} already processed, skipping`);
+    return new Response('ok (duplicate)', { status: 200 });
+  }
+
   const bookingId = Number(session.metadata?.booking_id);
   const kind = session.metadata?.kind;
   const amountTotal = session.amount_total ?? 0;
@@ -47,22 +71,6 @@ export const POST: APIRoute = async ({ request }) => {
   if (!bookingId || !kind) {
     console.error('Webhook session missing metadata', session.id);
     return new Response('ok', { status: 200 });
-  }
-
-  // Idempotency gate. Stripe retries on any non-2xx or timeout, and this
-  // endpoint writes to the database and sends email before responding, so a
-  // slow send is enough to trigger a replay. Claim the event first: if the
-  // row already exists we have handled it, so stop before touching money.
-  const claim = await query(
-    `INSERT INTO processed_events (event_id, session_id, booking_id, kind, amount_pence)
-     VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT DO NOTHING
-     RETURNING event_id`,
-    [event.id, session.id, bookingId, kind, amountTotal]
-  );
-  if (claim.rowCount === 0) {
-    console.log(`[webhook] event ${event.id} already processed, skipping`);
-    return new Response('ok (duplicate)', { status: 200 });
   }
 
   const found = await query<BookingRow>(`SELECT * FROM bookings WHERE id = $1`, [bookingId]);
@@ -117,7 +125,7 @@ export const POST: APIRoute = async ({ request }) => {
          WHERE id = $1`,
         [booking.id, paymentIntent ?? null, promoCode]
       );
-      await sendEmail(
+      await safeSend(
         booking.email,
         `CHACE STUDIOS booking ${booking.ref}: slot no longer available`,
         `<p>Hi ${booking.name},</p><p>Unfortunately the slot you booked was taken moments before your payment completed. Your payment has been refunded in full automatically.</p><p>Please rebook at a new time, we'd love to see you: <a href="https://chace.studio/packages">chace.studio/packages</a>.</p><p>CHACE STUDIOS</p>`
@@ -168,7 +176,7 @@ export const POST: APIRoute = async ({ request }) => {
        WHERE id = $1`,
       [booking.id, newPaid, newBalance]
     );
-    await sendEmail(
+    await safeSend(
       booking.email,
       `CHACE STUDIOS balance received for ${booking.ref}`,
       `<p>Hi ${booking.name},</p><p>We've received your balance payment of £${(amountTotal / 100).toFixed(2)} for booking <strong>${booking.ref}</strong>. ${newBalance === 0 ? 'Your booking is now paid in full. See you at the studio.' : `Remaining balance: £${(newBalance / 100).toFixed(2)}.`}</p><p>CHACE STUDIOS</p>`
@@ -183,10 +191,26 @@ export const POST: APIRoute = async ({ request }) => {
  * (paid/total/balance/promo) rather than the pre-payment hold.
  */
 async function notifyFromDb(bookingId: number): Promise<void> {
-  const { rows } = await query<BookingRow>(`SELECT * FROM bookings WHERE id = $1`, [bookingId]);
-  if (!rows[0]) {
-    console.error(`[notify] booking ${bookingId} vanished before notification`);
-    return;
+  try {
+    const { rows } = await query<BookingRow>(`SELECT * FROM bookings WHERE id = $1`, [bookingId]);
+    if (!rows[0]) {
+      console.error(`[notify] booking ${bookingId} vanished before notification`);
+      return;
+    }
+    await sendBookingNotifications(rows[0]);
+  } catch (err) {
+    // Swallow deliberately. Returning non-2xx here would make Stripe retry
+    // the whole event, and the retry is the thing that causes double
+    // processing. The payment is already recorded; only the email is lost.
+    console.error(`[notify] notification failed for booking ${bookingId}, not retrying:`, err);
   }
-  await sendBookingNotifications(rows[0]);
+}
+
+/** Same reasoning: an email problem must never fail the webhook response. */
+async function safeSend(...args: Parameters<typeof sendEmail>): Promise<void> {
+  try {
+    await sendEmail(...args);
+  } catch (err) {
+    console.error('[email] send threw, not retrying:', err);
+  }
 }
