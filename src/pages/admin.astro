@@ -160,6 +160,12 @@ const mins = (b: BookingRow) => {
                         <button type="submit" class="ad__btn">Collect balance</button>
                       </form>
                     )}
+                    {['deposit_paid', 'paid_in_full'].includes(b.status) && (
+                      <form method="POST" action="/api/admin/resend-notification">
+                        <input type="hidden" name="booking_id" value={b.id} />
+                        <button type="submit" class="ad__btn">Resend emails</button>
+                      </form>
+                    )}
                     {b.balance_session_url && (
                       <button type="button" class="ad__btn ad__btn--copy" data-copy={b.balance_session_url}>
                         Copy pay link
