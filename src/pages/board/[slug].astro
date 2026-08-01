@@ -1823,8 +1823,64 @@ const PRESETS = [
   // dropping the viewer into empty space.
   mapReady = true;
   drawMap();
+
+  /** Resolve once every image has loaded or failed, or the wait times out. */
+  function imagesSettled(timeoutMs = 4000): Promise<void> {
+    const pendingImgs = [...world.querySelectorAll('img')].filter((img) => !img.complete);
+    if (!pendingImgs.length) return Promise.resolve();
+    return Promise.race([
+      Promise.all(
+        pendingImgs.map(
+          (img) =>
+            new Promise<void>((res) => {
+              img.addEventListener('load', () => res(), { once: true });
+              img.addEventListener('error', () => res(), { once: true });
+            })
+        )
+      ).then(() => undefined),
+      new Promise<void>((res) => setTimeout(res, timeoutMs)),
+    ]);
+  }
+
+  const boundsKey = () => {
+    const b = contentBounds();
+    return b ? `${Math.round(b.minX)},${Math.round(b.minY)},${Math.round(b.maxX)},${Math.round(b.maxY)}` : '';
+  };
+
+  // Any deliberate interaction cancels the opening fit, so the camera is
+  // never yanked out from under someone who has started looking around.
+  let userHasInteracted = false;
+  const noteInteraction = () => (userHasInteracted = true);
+  viewport.addEventListener('pointerdown', noteInteraction, { once: true });
+  viewport.addEventListener('wheel', noteInteraction, { once: true, passive: true });
+
   if (world.children.length > 0) {
-    requestAnimationFrame(() => fitToContent(900));
+    (async () => {
+      // Fitting before the photos report their size measures a board that is
+      // the wrong shape, which is what left the camera looking at nothing.
+      await imagesSettled();
+      // Two frames so the browser has finished laying the new sizes out.
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      if (userHasInteracted) return;
+
+      let key = boundsKey();
+      fitToContent(900);
+
+      // A slow image can still land after the fit and change the shape of the
+      // board. Re-fit once if that happens and nobody has taken over yet.
+      const settle = window.setInterval(() => {
+        if (userHasInteracted) {
+          window.clearInterval(settle);
+          return;
+        }
+        const next = boundsKey();
+        if (next !== key) {
+          key = next;
+          fitToContent(500);
+        }
+      }, 700);
+      window.setTimeout(() => window.clearInterval(settle), 6000);
+    })();
   }
 
   // ---------- stock image tabs ----------
