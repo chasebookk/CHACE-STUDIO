@@ -30,6 +30,15 @@ const PORTFOLIO = [
 const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, category: c.id })));
 
 // A provider with no key configured is hidden rather than shown broken.
+// A capped sample for the atmosphere layer. Small on purpose: this is
+// background texture, not a gallery.
+const BACKDROP = [
+  ...images('portraits', 5),
+  ...images('weddings', 3),
+  ...images('fashion', 3),
+  ...images('events', 3),
+];
+
 const STOCK = configuredProviders();
 const PRESETS = [
   'Weddings', 'Portraits', 'Maternity', 'Graduation', 'Studio lighting',
@@ -63,6 +72,13 @@ const PRESETS = [
         <button type="button" class="bd-tool bd-tool--share" data-share>Copy link</button>
       </div>
     </header>
+
+    <!-- Studio wall behind everything: a bowed grid of CHACE work that drifts
+         and crossfades. Deliberately faint, and it gets fainter still once the
+         client has put something on the board. -->
+    <div class="bd-wall" data-wall aria-hidden="true">
+      <div class="bd-wall__inner" data-wall-inner></div>
+    </div>
 
     <!-- Slide-out tray of studio frames. Drag one onto the board, or tap to
          drop it in the middle. -->
@@ -173,7 +189,8 @@ const PRESETS = [
 
     <div class="bd-hint" data-hint hidden></div>
 
-    <template data-note-colours>{NOTE_COLOURS.join(',')}</template>
+    <script type="application/json" data-note-colours set:html={JSON.stringify(NOTE_COLOURS)}></script>
+    <script type="application/json" data-backdrop set:html={JSON.stringify(BACKDROP)}></script>
   </div>
 </Base>
 
@@ -277,6 +294,65 @@ const PRESETS = [
   }
   .bd-viewport.is-panning {
     cursor: grabbing;
+  }
+
+  /* ---- Living background ---- */
+  .bd-wall {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+    /* Never competes with the client's images: faint, blurred, desaturated. */
+    opacity: 0.05;
+    filter: blur(8px) saturate(0.3);
+    transition: opacity 0.9s ease;
+    perspective: 900px;
+    perspective-origin: 50% 45%;
+  }
+  /* Once the board has content, the wall gets out of the way. */
+  .bd-wall.is-dim {
+    opacity: 0.02;
+  }
+
+  .bd-wall__inner {
+    position: absolute;
+    inset: -18%;
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+
+  .bd-wall__tile {
+    position: absolute;
+    width: 210px;
+    height: 262px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #141414;
+    /* Bowed away from the centre so the wall reads as receding. */
+    transform: translate3d(var(--tx), var(--ty), var(--tz)) rotateY(var(--ry)) rotateX(var(--rx));
+  }
+  .bd-wall__tile img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 1.4s ease;
+  }
+  .bd-wall__tile img.is-shown {
+    opacity: 1;
+  }
+  .bd-wall__mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--grad-accent);
+    font-family: var(--font-display);
+    font-size: 34px;
+    letter-spacing: -1px;
+    color: rgba(255, 255, 255, 0.9);
   }
 
   /* Dot grid drifts slower than the items, which reads as depth. */
@@ -782,6 +858,13 @@ const PRESETS = [
   }
 
   @media (prefers-reduced-motion: reduce) {
+    /* A single still frame instead of a moving wall. */
+    .bd-wall__inner {
+      transition: none !important;
+    }
+    .bd-wall__tile img {
+      transition: none;
+    }
     .bd-item--entering {
       animation: none;
     }
@@ -915,9 +998,9 @@ const PRESETS = [
   const mapCtx = map.getContext('2d')!;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const NOTE_COLOURS = (document.querySelector('[data-note-colours]')?.textContent ?? '')
-    .split(',')
-    .filter(Boolean);
+  const NOTE_COLOURS: string[] = JSON.parse(
+    document.querySelector('[data-note-colours]')?.textContent || '[]'
+  );
 
   // ---------- view transform ----------
   let panX = 0;
@@ -2043,6 +2126,125 @@ const PRESETS = [
     searchTimer = window.setTimeout(() => runSearch(q), 400);
   });
   searchBox?.addEventListener('keydown', (e) => e.stopPropagation());
+
+  // ---------- living background ----------
+  // A bowed grid of studio work behind the board. Atmosphere only: it is
+  // faint, it dims further once the client has added anything, and it stops
+  // moving entirely while they are working or if they prefer reduced motion.
+  (() => {
+    const wall = document.querySelector<HTMLElement>('[data-wall]');
+    const inner = document.querySelector<HTMLElement>('[data-wall-inner]');
+    if (!wall || !inner) return;
+
+    const sources: string[] = JSON.parse(
+      document.querySelector('[data-backdrop]')?.textContent || '[]'
+    );
+    if (!sources.length) return;
+
+    const COLS = 5;
+    const ROWS = 3;
+    const GAP_X = 250;
+    const GAP_Y = 300;
+    const HOLD_MIN = 8000;
+    const HOLD_MAX = 12000;
+
+    let cursor = 0;
+    const nextSource = () => sources[cursor++ % sources.length];
+    const tiles: { el: HTMLElement; layers: HTMLImageElement[]; front: number }[] = [];
+
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const el = document.createElement('div');
+        el.className = 'bd-wall__tile';
+
+        // Curve: tiles further from the centre turn and recede, so the grid
+        // bows like a wall rather than sitting flat.
+        const nx = c - (COLS - 1) / 2;
+        const ny = r - (ROWS - 1) / 2;
+        el.style.setProperty('--tx', `${nx * GAP_X + 50}px`);
+        el.style.setProperty('--ty', `${ny * GAP_Y + 40}px`);
+        el.style.setProperty('--tz', `${-Math.abs(nx) * 70 - Math.abs(ny) * 40}px`);
+        el.style.setProperty('--ry', `${-nx * 9}deg`);
+        el.style.setProperty('--rx', `${ny * 5}deg`);
+
+        // Occasional brand mark rather than a photograph.
+        if ((r * COLS + c) % 7 === 3) {
+          el.classList.add('bd-wall__mark');
+          el.textContent = 'CHACE';
+          inner.appendChild(el);
+          continue;
+        }
+
+        const a = document.createElement('img');
+        const b = document.createElement('img');
+        a.src = nextSource();
+        a.classList.add('is-shown');
+        a.loading = 'lazy';
+        b.loading = 'lazy';
+        el.append(a, b);
+        inner.appendChild(el);
+        tiles.push({ el, layers: [a, b], front: 0 });
+      }
+    }
+
+    /** Dim the wall as soon as the board has anything on it. */
+    function syncDim() {
+      wall.classList.toggle('is-dim', world.children.length > 0);
+    }
+    syncDim();
+    new MutationObserver(syncDim).observe(world, { childList: true });
+
+    if (reduceMotion) return; // a single static frame, nothing animates
+
+    // Crossfades, staggered so the wall never pulses in unison.
+    let paused = false;
+    const timers: number[] = [];
+    tiles.forEach((tile, i) => {
+      const swap = () => {
+        if (!paused && !document.hidden) {
+          const back = tile.layers[1 - tile.front];
+          back.src = nextSource();
+          back.classList.add('is-shown');
+          tile.layers[tile.front].classList.remove('is-shown');
+          tile.front = 1 - tile.front;
+        }
+        timers.push(window.setTimeout(swap, HOLD_MIN + Math.random() * (HOLD_MAX - HOLD_MIN)));
+      };
+      timers.push(window.setTimeout(swap, 600 * i + Math.random() * 1200));
+    });
+
+    // Parallax at roughly a third of the canvas, and a slow drift, both on
+    // transform only so this stays on the compositor.
+    let drift = 0;
+    let raf = 0;
+    const render = () => {
+      inner.style.transform = `translate3d(${panX * 0.3 + Math.sin(drift) * 14}px, ${
+        panY * 0.3 + Math.cos(drift * 0.8) * 10
+      }px, 0)`;
+      raf = requestAnimationFrame(() => {
+        drift += 0.0016;
+        render();
+      });
+    };
+    render();
+
+    /** Never animate under an interaction. */
+    function pause() {
+      if (paused) return;
+      paused = true;
+      cancelAnimationFrame(raf);
+    }
+    function resume() {
+      if (!paused || document.hidden) return;
+      paused = false;
+      render();
+    }
+    viewport.addEventListener('pointerdown', pause);
+    window.addEventListener('pointerup', () => window.setTimeout(resume, 400));
+    document.addEventListener('focusin', pause);
+    document.addEventListener('focusout', () => window.setTimeout(resume, 400));
+    document.addEventListener('visibilitychange', () => (document.hidden ? pause() : resume()));
+  })();
 
   // ---------- share ----------
   document.querySelector('[data-share]')?.addEventListener('click', async () => {
