@@ -75,3 +75,35 @@ CREATE TABLE IF NOT EXISTS checkout_attempts (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS checkout_attempts_ip_idx ON checkout_attempts (ip, created_at);
+
+-- ---- Shared moodboards ----
+-- One board per client, reached only by its unguessable slug.
+CREATE TABLE IF NOT EXISTS boards (
+  id SERIAL PRIMARY KEY,
+  slug TEXT UNIQUE NOT NULL,
+  client_name TEXT NOT NULL,
+  title TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Everything on a board: photos, notes, text, ink. Position is free form,
+-- nothing snaps, so x/y/rotation/scale are stored exactly as dropped.
+CREATE TABLE IF NOT EXISTS board_items (
+  id SERIAL PRIMARY KEY,
+  board_id INT NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  x REAL NOT NULL, y REAL NOT NULL,
+  rotation REAL DEFAULT 0,
+  scale REAL DEFAULT 1,
+  z INT DEFAULT 0,
+  url TEXT,
+  caption TEXT,
+  colour TEXT,
+  path TEXT,
+  author TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS board_items_board_idx ON board_items (board_id);

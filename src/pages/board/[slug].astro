@@ -1,0 +1,936 @@
+---
+export const prerender = false;
+
+import Base from '../../layouts/Base.astro';
+import { getBoard, getBoardItems } from '../../lib/boards';
+
+const slug = String(Astro.params.slug ?? '');
+const board = await getBoard(slug);
+if (!board) return Astro.redirect('/', 302);
+
+const items = await getBoardItems(board.id);
+const NOTE_COLOURS = ['#FFA600', '#FF1909', '#F5F1E8', '#0a0a0a'];
+---
+
+<Base
+  title={`${board.title ?? board.client_name} | CHACE STUDIOS moodboard`}
+  description="Private moodboard"
+  robots="noindex, nofollow"
+>
+  <div class="bd" data-slug={board.slug}>
+    <header class="bd-bar">
+      <div class="bd-bar__left">
+        <span class="bd-logo display">CHACE</span>
+        <span class="bd-client">{board.title ?? board.client_name}</span>
+      </div>
+      <div class="bd-bar__right">
+        <button type="button" class="bd-tool" data-add-note title="Add a note">
+          <span class="bd-tool__dot" style="background:#FFA600"></span> Note
+        </button>
+        <button type="button" class="bd-tool" data-add-photo title="Add images">
+          Add images
+        </button>
+        <input type="file" accept="image/*" multiple hidden data-file-input />
+        <button type="button" class="bd-tool bd-tool--share" data-share>Copy link</button>
+      </div>
+    </header>
+
+    <!-- The board itself. Pan by dragging empty space, zoom with scroll or pinch. -->
+    <div class="bd-viewport" data-viewport>
+      <div class="bd-grid" data-grid></div>
+
+      <div class="bd-world" data-world>
+        {items.map((item) => (
+          <div
+            class:list={['bd-item', `bd-item--${item.kind}`]}
+            data-id={item.id}
+            data-kind={item.kind}
+            data-x={item.x}
+            data-y={item.y}
+            data-rot={item.rotation}
+            data-scale={item.scale}
+            style={`--x:${item.x}px; --y:${item.y}px; --rot:${item.rotation}deg; --scale:${item.scale}; z-index:${item.z}`}
+          >
+            <button type="button" class="bd-item__del" data-del title="Remove">&times;</button>
+
+            {item.kind === 'photo' && (
+              <figure class="bd-photo">
+                <img src={item.url} alt={item.caption ?? ''} draggable="false" />
+                <figcaption
+                  class="bd-photo__cap"
+                  data-caption
+                  data-placeholder="Add a caption"
+                >{item.caption ?? ''}</figcaption>
+              </figure>
+            )}
+
+            {item.kind === 'note' && (
+              <div class="bd-note" style={`--note:${item.colour ?? '#FFA600'}`}>
+                <div class="bd-note__body" data-caption data-placeholder="Type a note">{item.caption ?? ''}</div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {items.length === 0 && (
+        <p class="bd-empty" data-empty>
+          Drop images anywhere, paste from your clipboard, or add a note.
+        </p>
+      )}
+    </div>
+
+    <div class="bd-hint" data-hint hidden></div>
+
+    <template data-note-colours>{NOTE_COLOURS.join(',')}</template>
+  </div>
+</Base>
+
+<style is:global>
+  /* The board is a full-bleed app surface, so the usual page shell is not
+     wanted here. */
+  body:has(.bd) {
+    overflow: hidden;
+  }
+  body:has(.bd) .page {
+    max-width: none;
+  }
+</style>
+
+<style>
+  .bd {
+    position: fixed;
+    inset: 0;
+    background: #0a0a0a;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ---- Top bar ---- */
+  .bd-bar {
+    position: absolute;
+    inset: 0 0 auto 0;
+    z-index: 30;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    background: rgba(10, 10, 10, 0.82);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .bd-bar__left,
+  .bd-bar__right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .bd-logo {
+    font-size: 20px;
+    letter-spacing: -1px;
+    color: var(--white);
+  }
+  .bd-client {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-left: 12px;
+    border-left: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .bd-tool {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--white);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+  }
+  .bd-tool:hover {
+    border-color: var(--white);
+  }
+  .bd-tool:active {
+    transform: scale(0.97);
+  }
+  .bd-tool--share {
+    background: var(--grad-accent);
+    border-color: transparent;
+  }
+  .bd-tool__dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 9999px;
+  }
+
+  /* ---- Canvas ---- */
+  .bd-viewport {
+    position: absolute;
+    inset: 60px 0 0 0;
+    overflow: hidden;
+    cursor: grab;
+    touch-action: none;
+  }
+  .bd-viewport.is-panning {
+    cursor: grabbing;
+  }
+
+  /* Dot grid drifts slower than the items, which reads as depth. */
+  .bd-grid {
+    position: absolute;
+    inset: -50%;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+    background-size: 26px 26px;
+    pointer-events: none;
+  }
+
+  .bd-world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    transform-origin: 0 0;
+  }
+
+  .bd-item {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--rot))
+      scale(var(--scale));
+    transition: box-shadow 0.2s ease, filter 0.2s ease;
+    cursor: grab;
+    will-change: transform;
+  }
+  .bd-item.is-lifted {
+    cursor: grabbing;
+    z-index: 9999 !important;
+  }
+
+  /* Enter with a spring, slight overshoot, so a drop feels physical. */
+  @keyframes bd-drop-in {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--rot))
+        scale(calc(var(--scale) * 0.6));
+    }
+    70% {
+      opacity: 1;
+      transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--rot))
+        scale(calc(var(--scale) * 1.06));
+    }
+    100% {
+      opacity: 1;
+      transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--rot))
+        scale(var(--scale));
+    }
+  }
+  .bd-item--entering {
+    animation: bd-drop-in 0.42s cubic-bezier(0.22, 1.2, 0.36, 1);
+  }
+
+  .bd-item__del {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    z-index: 5;
+    width: 24px;
+    height: 24px;
+    border-radius: 9999px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    background: #fff;
+    color: #0a0a0a;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .bd-item:hover .bd-item__del,
+  .bd-item.is-selected .bd-item__del {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* ---- Photo, as a print on a table ---- */
+  .bd-photo {
+    margin: 0;
+    padding: 12px 12px 0;
+    background: #f7f4ee;
+    border-radius: 3px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.35);
+    width: 260px;
+  }
+  .bd-item.is-lifted .bd-photo,
+  .bd-item.is-lifted .bd-note {
+    box-shadow: 0 26px 50px rgba(0, 0, 0, 0.55), 0 6px 14px rgba(0, 0, 0, 0.4);
+  }
+  .bd-photo img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 340px;
+    object-fit: cover;
+    background: #e6e1d8;
+    pointer-events: none;
+  }
+  .bd-photo__cap {
+    padding: 9px 2px 12px;
+    min-height: 34px;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 13px;
+    line-height: 18px;
+    color: #2a2622;
+    text-align: center;
+    cursor: text;
+    outline: none;
+  }
+  .bd-photo__cap:empty::before,
+  .bd-note__body:empty::before {
+    content: attr(data-placeholder);
+    opacity: 0.4;
+  }
+
+  /* ---- Sticky note ---- */
+  .bd-note {
+    width: 200px;
+    min-height: 140px;
+    padding: 16px;
+    background: var(--note);
+    border-radius: 2px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  }
+  .bd-note__body {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 20px;
+    color: #16120c;
+    cursor: text;
+    outline: none;
+    word-break: break-word;
+  }
+  .bd-note[style*='#0a0a0a'] .bd-note__body,
+  .bd-note[style*='#FF1909'] .bd-note__body {
+    color: #fff;
+  }
+
+  /* ---- Upload placeholder ---- */
+  .bd-item--pending .bd-photo {
+    width: 260px;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .bd-shimmer {
+    width: 100%;
+    height: 190px;
+    border-radius: 2px;
+    background: linear-gradient(100deg, #e6e1d8 30%, #f7f4ee 50%, #e6e1d8 70%);
+    background-size: 200% 100%;
+    animation: bd-shimmer 1.1s ease-in-out infinite;
+  }
+  @keyframes bd-shimmer {
+    to {
+      background-position: -200% 0;
+    }
+  }
+
+  .bd-empty {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.28);
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .bd-hint {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    padding: 10px 18px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #0a0a0a;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.6px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+  .bd-hint[hidden] {
+    display: none;
+  }
+
+  .bd-viewport.is-dropping::after {
+    content: '';
+    position: absolute;
+    inset: 12px;
+    border: 2px dashed rgba(255, 166, 0, 0.7);
+    border-radius: 14px;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bd-item--entering {
+      animation: none;
+    }
+    .bd-shimmer {
+      animation: none;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .bd-client {
+      display: none;
+    }
+    .bd-tool {
+      padding: 0 11px;
+      font-size: 10px;
+    }
+  }
+</style>
+
+<script>
+  import { upload } from '@vercel/blob/client';
+
+  const root = document.querySelector<HTMLElement>('.bd')!;
+  const slug = root.dataset.slug!;
+  const viewport = document.querySelector<HTMLElement>('[data-viewport]')!;
+  const world = document.querySelector<HTMLElement>('[data-world]')!;
+  const grid = document.querySelector<HTMLElement>('[data-grid]')!;
+  const hint = document.querySelector<HTMLElement>('[data-hint]')!;
+  const fileInput = document.querySelector<HTMLInputElement>('[data-file-input]')!;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const NOTE_COLOURS = (document.querySelector('[data-note-colours]')?.textContent ?? '')
+    .split(',')
+    .filter(Boolean);
+
+  // ---------- view transform ----------
+  let panX = 0;
+  let panY = 0;
+  let zoom = 1;
+
+  function applyTransform() {
+    world.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+    // Grid drifts at half speed, which gives the board a sense of depth.
+    grid.style.backgroundPosition = `${panX * 0.5}px ${panY * 0.5}px`;
+    grid.style.backgroundSize = `${26 * zoom}px ${26 * zoom}px`;
+  }
+
+  // Start with the origin near the middle so the first drop is comfortable.
+  panX = viewport.clientWidth / 2;
+  panY = viewport.clientHeight / 2;
+  applyTransform();
+
+  /** Screen point to world coordinates. */
+  function toWorld(clientX: number, clientY: number) {
+    const rect = viewport.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left - panX) / zoom,
+      y: (clientY - rect.top - panY) / zoom,
+    };
+  }
+
+  function showHint(message: string, ms = 2600) {
+    hint.textContent = message;
+    hint.hidden = false;
+    window.clearTimeout((showHint as any)._t);
+    (showHint as any)._t = window.setTimeout(() => (hint.hidden = true), ms);
+  }
+
+  // ---------- panning, with inertia ----------
+  let panning = false;
+  let panPointer = -1;
+  let lastX = 0;
+  let lastY = 0;
+  let vx = 0;
+  let vy = 0;
+  let glideFrame = 0;
+
+  viewport.addEventListener('pointerdown', (e) => {
+    if ((e.target as HTMLElement).closest('.bd-item')) return;
+    panning = true;
+    panPointer = e.pointerId;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    vx = vy = 0;
+    cancelAnimationFrame(glideFrame);
+    viewport.classList.add('is-panning');
+    viewport.setPointerCapture(e.pointerId);
+    deselect();
+  });
+
+  viewport.addEventListener('pointermove', (e) => {
+    if (!panning || e.pointerId !== panPointer) return;
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    panX += dx;
+    panY += dy;
+    vx = dx;
+    vy = dy;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    applyTransform();
+  });
+
+  function endPan() {
+    if (!panning) return;
+    panning = false;
+    viewport.classList.remove('is-panning');
+    if (reduceMotion) return;
+    const glide = () => {
+      vx *= 0.94;
+      vy *= 0.94;
+      if (Math.abs(vx) < 0.15 && Math.abs(vy) < 0.15) return;
+      panX += vx;
+      panY += vy;
+      applyTransform();
+      glideFrame = requestAnimationFrame(glide);
+    };
+    glideFrame = requestAnimationFrame(glide);
+  }
+  viewport.addEventListener('pointerup', endPan);
+  viewport.addEventListener('pointercancel', endPan);
+
+  // ---------- zoom ----------
+  function zoomAt(clientX: number, clientY: number, factor: number) {
+    const next = Math.min(3, Math.max(0.2, zoom * factor));
+    const rect = viewport.getBoundingClientRect();
+    const px = clientX - rect.left;
+    const py = clientY - rect.top;
+    // Keep the point under the cursor fixed while scaling.
+    panX = px - ((px - panX) / zoom) * next;
+    panY = py - ((py - panY) / zoom) * next;
+    zoom = next;
+    applyTransform();
+  }
+
+  viewport.addEventListener(
+    'wheel',
+    (e) => {
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {
+        zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.08 : 0.92);
+      } else {
+        // Trackpad two-finger scroll pans; that is what the gesture means.
+        panX -= e.deltaX;
+        panY -= e.deltaY;
+        applyTransform();
+      }
+    },
+    { passive: false }
+  );
+
+  // Pinch zoom with two pointers.
+  const pinch = new Map<number, { x: number; y: number }>();
+  let pinchDist = 0;
+  viewport.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return;
+    pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch.size === 2) {
+      panning = false;
+      const [a, b] = [...pinch.values()];
+      pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+    }
+  });
+  viewport.addEventListener('pointermove', (e) => {
+    if (!pinch.has(e.pointerId)) return;
+    pinch.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch.size !== 2) return;
+    const [a, b] = [...pinch.values()];
+    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+    if (pinchDist > 0) zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, dist / pinchDist);
+    pinchDist = dist;
+  });
+  const dropPinch = (e: PointerEvent) => {
+    pinch.delete(e.pointerId);
+    if (pinch.size < 2) pinchDist = 0;
+  };
+  viewport.addEventListener('pointerup', dropPinch);
+  viewport.addEventListener('pointercancel', dropPinch);
+
+  // ---------- saving ----------
+  const pending = new Map<number, Record<string, unknown>>();
+  const timers = new Map<number, number>();
+
+  function save(id: number, patch: Record<string, unknown>) {
+    pending.set(id, { ...(pending.get(id) ?? {}), ...patch });
+    window.clearTimeout(timers.get(id));
+    timers.set(
+      id,
+      window.setTimeout(async () => {
+        const body = pending.get(id);
+        pending.delete(id);
+        try {
+          const res = await fetch(`/api/board/${slug}/items/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) throw new Error(String(res.status));
+        } catch {
+          showHint('Could not save that change. Check your connection.');
+        }
+      }, 400)
+    );
+  }
+
+  async function createItem(data: Record<string, unknown>) {
+    const res = await fetch(`/api/board/${slug}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('create failed');
+    return (await res.json()).item;
+  }
+
+  // ---------- item behaviour ----------
+  let topZ = Math.max(0, ...[...world.children].map((el) => Number((el as HTMLElement).style.zIndex) || 0));
+  let selected: HTMLElement | null = null;
+
+  function deselect() {
+    selected?.classList.remove('is-selected');
+    selected = null;
+  }
+
+  function bringToFront(el: HTMLElement) {
+    topZ += 1;
+    el.style.zIndex = String(topZ);
+    save(Number(el.dataset.id), { z: topZ });
+  }
+
+  /** A small random tilt on drop, so the board always looks hand arranged. */
+  const settleRotation = () => (Math.random() * 7 - 3.5).toFixed(2);
+
+  function wireItem(el: HTMLElement) {
+    const del = el.querySelector<HTMLButtonElement>('[data-del]');
+    del?.addEventListener('pointerdown', (e) => e.stopPropagation());
+    del?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = Number(el.dataset.id);
+      el.remove();
+      try {
+        await fetch(`/api/board/${slug}/items/${id}`, { method: 'DELETE' });
+      } catch {
+        showHint('Could not remove that item.');
+      }
+    });
+
+    // Editable caption or note body.
+    const cap = el.querySelector<HTMLElement>('[data-caption]');
+    if (cap) {
+      cap.addEventListener('blur', () => {
+        cap.contentEditable = 'false';
+        save(Number(el.dataset.id), { caption: cap.textContent ?? '' });
+      });
+      cap.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Escape') cap.blur();
+      });
+    }
+
+    el.addEventListener('pointerdown', (e) => {
+      if ((e.target as HTMLElement).isContentEditable) return;
+      e.stopPropagation();
+
+      deselect();
+      selected = el;
+      el.classList.add('is-selected', 'is-lifted');
+      bringToFront(el);
+      el.setPointerCapture(e.pointerId);
+
+      // Remembered so a press that never moves can open the caption for
+      // editing, while a press that travels drags the whole item.
+      const startTarget = e.target as HTMLElement;
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const originX = Number(el.dataset.x);
+      const originY = Number(el.dataset.y);
+      const baseRot = Number(el.dataset.rot);
+      let moved = false;
+      let lastMoveX = startX;
+
+      const onMove = (ev: PointerEvent) => {
+        const dx = (ev.clientX - startX) / zoom;
+        const dy = (ev.clientY - startY) / zoom;
+        if (!moved && Math.hypot(dx, dy) < 3) return;
+        moved = true;
+
+        const nx = originX + dx;
+        const ny = originY + dy;
+        el.dataset.x = String(nx);
+        el.dataset.y = String(ny);
+        el.style.setProperty('--x', `${nx}px`);
+        el.style.setProperty('--y', `${ny}px`);
+
+        // Tilt slightly in the direction of travel while carried.
+        if (!reduceMotion) {
+          const tilt = Math.max(-8, Math.min(8, (ev.clientX - lastMoveX) * 0.6));
+          el.style.setProperty('--rot', `${baseRot + tilt}deg`);
+          el.style.setProperty('--scale', String(Number(el.dataset.scale) * 1.06));
+        }
+        lastMoveX = ev.clientX;
+      };
+
+      const onUp = () => {
+        el.removeEventListener('pointermove', onMove);
+        el.removeEventListener('pointerup', onUp);
+        el.classList.remove('is-lifted');
+        el.style.setProperty('--scale', el.dataset.scale!);
+
+        if (moved) {
+          const rot = settleRotation();
+          el.dataset.rot = rot;
+          el.style.setProperty('--rot', `${rot}deg`);
+          save(Number(el.dataset.id), {
+            x: Number(el.dataset.x),
+            y: Number(el.dataset.y),
+            rotation: Number(rot),
+          });
+        } else {
+          el.style.setProperty('--rot', `${baseRot}deg`);
+          // A click that did not travel: edit the caption under the cursor.
+          const target = startTarget.closest<HTMLElement>('[data-caption]');
+          if (target) {
+            target.contentEditable = 'true';
+            target.focus();
+            const range = document.createRange();
+            range.selectNodeContents(target);
+            range.collapse(false);
+            const sel = window.getSelection();
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+          }
+        }
+      };
+
+      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointerup', onUp);
+    });
+  }
+
+  [...world.children].forEach((el) => wireItem(el as HTMLElement));
+
+  document.addEventListener('keydown', async (e) => {
+    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+    if (!selected || (e.target as HTMLElement).isContentEditable) return;
+    const id = Number(selected.dataset.id);
+    selected.remove();
+    selected = null;
+    try {
+      await fetch(`/api/board/${slug}/items/${id}`, { method: 'DELETE' });
+    } catch {
+      showHint('Could not remove that item.');
+    }
+  });
+
+  // ---------- rendering new items ----------
+  function renderItem(item: any, entering = true): HTMLElement {
+    const el = document.createElement('div');
+    el.className = `bd-item bd-item--${item.kind}${entering && !reduceMotion ? ' bd-item--entering' : ''}`;
+    el.dataset.id = String(item.id);
+    el.dataset.kind = item.kind;
+    el.dataset.x = String(item.x);
+    el.dataset.y = String(item.y);
+    el.dataset.rot = String(item.rotation ?? 0);
+    el.dataset.scale = String(item.scale ?? 1);
+    el.style.cssText = `--x:${item.x}px; --y:${item.y}px; --rot:${item.rotation ?? 0}deg; --scale:${item.scale ?? 1}; z-index:${item.z ?? 0}`;
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'bd-item__del';
+    del.dataset.del = '';
+    del.innerHTML = '&times;';
+    el.appendChild(del);
+
+    if (item.kind === 'photo') {
+      const fig = document.createElement('figure');
+      fig.className = 'bd-photo';
+      const img = document.createElement('img');
+      img.src = item.url;
+      img.alt = item.caption ?? '';
+      img.draggable = false;
+      const cap = document.createElement('figcaption');
+      cap.className = 'bd-photo__cap';
+      cap.dataset.caption = '';
+      cap.dataset.placeholder = 'Add a caption';
+      cap.textContent = item.caption ?? '';
+      fig.append(img, cap);
+      el.appendChild(fig);
+    } else if (item.kind === 'note') {
+      const note = document.createElement('div');
+      note.className = 'bd-note';
+      note.style.setProperty('--note', item.colour ?? '#FFA600');
+      const body = document.createElement('div');
+      body.className = 'bd-note__body';
+      body.dataset.caption = '';
+      body.dataset.placeholder = 'Type a note';
+      body.textContent = item.caption ?? '';
+      note.appendChild(body);
+      el.appendChild(note);
+    }
+
+    world.appendChild(el);
+    wireItem(el);
+    document.querySelector('[data-empty]')?.remove();
+    return el;
+  }
+
+  // ---------- images ----------
+  const MAX_BYTES = 15 * 1024 * 1024;
+  const MAX_EDGE = 1600;
+
+  /** Downscale and re-encode before upload so boards stay fast. */
+  async function prepare(file: File): Promise<Blob> {
+    const bitmap = await createImageBitmap(file).catch(() => null);
+    if (!bitmap) return file;
+    const ratio = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+    if (ratio === 1 && file.size < 900_000) return file;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * ratio);
+    canvas.height = Math.round(bitmap.height * ratio);
+    canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    return new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b ?? file), 'image/jpeg', 0.8)
+    );
+  }
+
+  async function addImage(file: File, at: { x: number; y: number }) {
+    if (file.size > MAX_BYTES) {
+      showHint(`${file.name} is over 15MB. Try a smaller version.`);
+      return;
+    }
+
+    // Placeholder card with a shimmer, so the drop feels immediate.
+    const holder = document.createElement('div');
+    holder.className = `bd-item bd-item--photo bd-item--pending${reduceMotion ? '' : ' bd-item--entering'}`;
+    holder.style.cssText = `--x:${at.x}px; --y:${at.y}px; --rot:0deg; --scale:1; z-index:${++topZ}`;
+    holder.innerHTML = '<figure class="bd-photo"><div class="bd-shimmer"></div></figure>';
+    world.appendChild(holder);
+    document.querySelector('[data-empty]')?.remove();
+
+    try {
+      const blob = await prepare(file);
+      const name = file.name.replace(/\.[^.]+$/, '') || 'image';
+      const result = await upload(`boards/${slug}/${name}.jpg`, blob, {
+        access: 'public',
+        handleUploadUrl: '/api/board/upload',
+        clientPayload: slug,
+      });
+      const item = await createItem({
+        kind: 'photo',
+        x: at.x,
+        y: at.y,
+        rotation: Number((Math.random() * 7 - 3.5).toFixed(2)),
+        scale: 1,
+        url: result.url,
+        author: 'client',
+      });
+      holder.remove();
+      renderItem(item);
+    } catch (err) {
+      holder.remove();
+      console.error('[board] upload failed:', err);
+      showHint('That image could not be uploaded.');
+    }
+  }
+
+  function addFiles(files: FileList | File[], at: { x: number; y: number }) {
+    [...files]
+      .filter((f) => f.type.startsWith('image/'))
+      .forEach((file, i) => {
+        // Fan multiple files out slightly rather than stacking them exactly.
+        addImage(file, { x: at.x + i * 26, y: at.y + i * 18 });
+      });
+  }
+
+  viewport.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    viewport.classList.add('is-dropping');
+  });
+  viewport.addEventListener('dragleave', () => viewport.classList.remove('is-dropping'));
+  viewport.addEventListener('drop', (e) => {
+    e.preventDefault();
+    viewport.classList.remove('is-dropping');
+    if (!e.dataTransfer?.files.length) return;
+    addFiles(e.dataTransfer.files, toWorld(e.clientX, e.clientY));
+  });
+
+  document.addEventListener('paste', (e) => {
+    const files = [...(e.clipboardData?.files ?? [])];
+    if (!files.length) return;
+    e.preventDefault();
+    addFiles(files, toWorld(window.innerWidth / 2, window.innerHeight / 2));
+  });
+
+  document.querySelector('[data-add-photo]')?.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files?.length) {
+      addFiles(fileInput.files, toWorld(window.innerWidth / 2, window.innerHeight / 2));
+    }
+    fileInput.value = '';
+  });
+
+  // ---------- notes ----------
+  let noteColour = Math.floor(Math.random() * NOTE_COLOURS.length);
+  document.querySelector('[data-add-note]')?.addEventListener('click', async () => {
+    const colour = NOTE_COLOURS[noteColour++ % NOTE_COLOURS.length];
+    const at = toWorld(window.innerWidth / 2, window.innerHeight / 2 + 30);
+    try {
+      const item = await createItem({
+        kind: 'note',
+        x: at.x + (Math.random() * 80 - 40),
+        y: at.y + (Math.random() * 60 - 30),
+        rotation: Number((Math.random() * 7 - 3.5).toFixed(2)),
+        scale: 1,
+        colour,
+        caption: '',
+        author: 'client',
+      });
+      const el = renderItem(item);
+      el.querySelector<HTMLElement>('[data-caption]')?.click();
+    } catch {
+      showHint('Could not add that note.');
+    }
+  });
+
+  // ---------- share ----------
+  document.querySelector('[data-share]')?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      showHint('Board link copied.');
+    } catch {
+      showHint(window.location.href);
+    }
+  });
+</script>
