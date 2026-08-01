@@ -87,7 +87,10 @@ const mins = (b: BookingRow) => {
 
 <Base title="Admin | CHACE STUDIOS" description="Admin">
   <main class="ad">
-    <h1 class="display ad__title">Bookings admin</h1>
+    <div class="ad__head">
+      <h1 class="display ad__title">Bookings admin</h1>
+      <a href="/admin/boards" class="ad__btn ad__btn--board">Moodboards</a>
+    </div>
 
     <section class="ad__section">
       <h2 class="display ad__h2">Schedule</h2>
@@ -160,6 +163,11 @@ const mins = (b: BookingRow) => {
                         <button type="submit" class="ad__btn">Collect balance</button>
                       </form>
                     )}
+                    <form method="POST" action="/api/admin/boards/create">
+                      <input type="hidden" name="client_name" value={b.name} />
+                      <input type="hidden" name="title" value={`${b.name}, ${pkgTitle(b)}`} />
+                      <button type="submit" class="ad__btn ad__btn--board">Moodboard</button>
+                    </form>
                     {['deposit_paid', 'paid_in_full'].includes(b.status) && (
                       <form method="POST" action="/api/admin/resend-notification">
                         <input type="hidden" name="booking_id" value={b.id} />
@@ -254,10 +262,17 @@ const mins = (b: BookingRow) => {
     .ad {
       padding: 48px var(--pad) 96px;
     }
+    .ad__head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
     .ad__title {
       font-size: clamp(28px, 4vw, 40px);
       letter-spacing: -0.04em;
-      margin: 0 0 40px;
+      margin: 0;
     }
     .ad__h2 {
       font-size: 18px;
@@ -342,7 +357,8 @@ const mins = (b: BookingRow) => {
       border-color: var(--red);
       color: var(--red);
     }
-    .ad__btn--copy {
+    .ad__btn--copy,
+    .ad__btn--board {
       border-color: var(--orange);
     }
     /* ---- Shareable links ---- */

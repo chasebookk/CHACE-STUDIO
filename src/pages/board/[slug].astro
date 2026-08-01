@@ -4,6 +4,7 @@ export const prerender = false;
 import Base from '../../layouts/Base.astro';
 import { getBoard, getBoardItems } from '../../lib/boards';
 import { images } from '../../data/portfolio';
+import { configuredProviders } from '../api/images/[provider]';
 
 const slug = String(Astro.params.slug ?? '');
 const board = await getBoard(slug);
@@ -27,6 +28,13 @@ const PORTFOLIO = [
 ].map((c) => ({ ...c, srcs: images(c.id) }));
 
 const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, category: c.id })));
+
+// A provider with no key configured is hidden rather than shown broken.
+const STOCK = configuredProviders();
+const PRESETS = [
+  'Weddings', 'Portraits', 'Maternity', 'Graduation', 'Studio lighting',
+  'Editorial', 'Colour palettes', 'Poses', 'Set design',
+];
 ---
 
 <Base
@@ -60,16 +68,38 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
          drop it in the middle. -->
     <aside class="bd-drawer" data-drawer aria-hidden="true">
       <div class="bd-drawer__head">
-        <span class="bd-drawer__title">My portfolio</span>
+        <span class="bd-drawer__title">Images</span>
         <button type="button" class="bd-drawer__close" data-drawer-close aria-label="Close portfolio">&times;</button>
       </div>
 
-      <div class="bd-drawer__filters">
+      {STOCK.length > 0 && (
+        <div class="bd-tabs">
+          <button type="button" class="bd-tab is-active" data-tab="chace">CHACE</button>
+          {STOCK.map((name) => (
+            <button type="button" class="bd-tab" data-tab={name}>
+              {name.charAt(0).toUpperCase() + name.slice(1)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div class="bd-drawer__filters" data-panel-filters="chace">
         <button type="button" class="bd-chip is-active" data-filter="all">All</button>
         {PORTFOLIO.map((c) => (
           <button type="button" class="bd-chip" data-filter={c.id}>{c.label}</button>
         ))}
       </div>
+
+      {STOCK.length > 0 && (
+        <div class="bd-stock" data-panel-filters="stock" hidden>
+          <input class="bd-search" type="search" placeholder="Search photos" data-stock-search />
+          <div class="bd-drawer__filters bd-drawer__filters--presets">
+            {PRESETS.map((preset) => (
+              <button type="button" class="bd-chip" data-preset={preset}>{preset}</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div class="bd-drawer__grid" data-drawer-grid>
         {PORTFOLIO_FLAT.map((img, i) => (
@@ -86,6 +116,12 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
           />
         ))}
       </div>
+
+      {STOCK.length > 0 && (
+        <div class="bd-drawer__grid" data-stock-grid hidden>
+          <p class="bd-stock__hint">Pick a category above, or search.</p>
+        </div>
+      )}
     </aside>
 
     <!-- The board itself. Pan by dragging empty space, zoom with scroll or pinch. -->
@@ -553,6 +589,87 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
     color: var(--white);
   }
 
+  .bd-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 16px 10px;
+  }
+  .bd-tab {
+    flex: 1;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .bd-tab.is-active {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--white);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .bd-stock[hidden],
+  .bd-drawer__filters[hidden] {
+    display: none;
+  }
+  .bd-search {
+    width: calc(100% - 32px);
+    margin: 0 16px 10px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 13px;
+    outline: none;
+  }
+  .bd-search:focus {
+    border-color: var(--orange);
+  }
+  .bd-drawer__filters--presets {
+    max-height: 92px;
+    overflow-y: auto;
+  }
+  .bd-stock__hint {
+    grid-column: 1 / -1;
+    margin: 8px 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+  }
+  .bd-thumb__wrap {
+    position: relative;
+  }
+  .bd-credit {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 4px 6px;
+    border-radius: 0 0 4px 4px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.85);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bd-thumb__wrap:hover .bd-credit {
+    opacity: 1;
+  }
+
   .bd-drawer__grid {
     flex: 1;
     overflow-y: auto;
@@ -686,7 +803,88 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
     .bd-drawer {
       width: 280px;
     }
-    .bd-drawer__grid {
+    .bd-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 16px 10px;
+  }
+  .bd-tab {
+    flex: 1;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .bd-tab.is-active {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--white);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .bd-stock[hidden],
+  .bd-drawer__filters[hidden] {
+    display: none;
+  }
+  .bd-search {
+    width: calc(100% - 32px);
+    margin: 0 16px 10px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 13px;
+    outline: none;
+  }
+  .bd-search:focus {
+    border-color: var(--orange);
+  }
+  .bd-drawer__filters--presets {
+    max-height: 92px;
+    overflow-y: auto;
+  }
+  .bd-stock__hint {
+    grid-column: 1 / -1;
+    margin: 8px 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+  }
+  .bd-thumb__wrap {
+    position: relative;
+  }
+  .bd-credit {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 4px 6px;
+    border-radius: 0 0 4px 4px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.85);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bd-thumb__wrap:hover .bd-credit {
+    opacity: 1;
+  }
+
+  .bd-drawer__grid {
       grid-template-columns: 1fr 1fr;
     }
     .bd-client {
@@ -1626,6 +1824,163 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
   if (world.children.length > 0) {
     requestAnimationFrame(() => fitToContent(900));
   }
+
+  // ---------- stock image tabs ----------
+  const stockGrid = document.querySelector<HTMLElement>('[data-stock-grid]');
+  const chaceGrid = document.querySelector<HTMLElement>('[data-drawer-grid]')!;
+  const chaceFilters = document.querySelector<HTMLElement>('[data-panel-filters="chace"]')!;
+  const stockPanel = document.querySelector<HTMLElement>('[data-panel-filters="stock"]');
+  let provider = 'unsplash';
+
+  function setTab(name: string) {
+    const isChace = name === 'chace';
+    provider = isChace ? provider : name;
+    drawer.querySelectorAll<HTMLElement>('[data-tab]').forEach((t) =>
+      t.classList.toggle('is-active', t.dataset.tab === name)
+    );
+    chaceGrid.hidden = !isChace;
+    chaceFilters.hidden = !isChace;
+    if (stockPanel) stockPanel.hidden = isChace;
+    if (stockGrid) stockGrid.hidden = isChace;
+  }
+  drawer.querySelectorAll<HTMLElement>('[data-tab]').forEach((tab) => {
+    tab.addEventListener('click', () => setTab(tab.dataset.tab!));
+  });
+
+  /** Drag a stock result onto the board; it is re-hosted before it is saved. */
+  function wireStockThumb(wrap: HTMLElement, result: any) {
+    const img = wrap.querySelector('img')!;
+    img.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let ghost: HTMLImageElement | null = null;
+      img.setPointerCapture(e.pointerId);
+
+      const onMove = (ev: PointerEvent) => {
+        if (!ghost && Math.hypot(ev.clientX - startX, ev.clientY - startY) > 6) {
+          ghost = document.createElement('img');
+          ghost.className = 'bd-ghost';
+          ghost.src = result.thumb;
+          document.body.appendChild(ghost);
+        }
+        if (ghost) {
+          ghost.style.left = `${ev.clientX}px`;
+          ghost.style.top = `${ev.clientY}px`;
+        }
+      };
+      const onUp = (ev: PointerEvent) => {
+        img.removeEventListener('pointermove', onMove);
+        img.removeEventListener('pointerup', onUp);
+        ghost?.remove();
+        const past = ev.clientX > drawer.getBoundingClientRect().right;
+        const at = ghost && past
+          ? toWorld(ev.clientX, ev.clientY)
+          : toWorld(window.innerWidth / 2, window.innerHeight / 2);
+        if (ghost && !past) return;
+        addStockImage(result, at);
+      };
+      img.addEventListener('pointermove', onMove);
+      img.addEventListener('pointerup', onUp);
+    });
+  }
+
+  async function addStockImage(result: any, at: { x: number; y: number }) {
+    // Show it immediately from the provider's thumbnail, exactly as an
+    // upload shows immediately from its object URL.
+    const rotation = Number((Math.random() * 7 - 3.5).toFixed(2));
+    const el = renderItem(
+      { kind: 'photo', x: at.x, y: at.y, rotation, scale: 1, z: ++topZ, url: result.thumb, caption: '' },
+      true
+    );
+    el.classList.add('is-uploading');
+    const ring = document.createElement('div');
+    ring.className = 'bd-progress';
+    el.querySelector('.bd-photo')?.appendChild(ring);
+
+    try {
+      const res = await fetch(`/api/board/${slug}/rehost`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: result.full }),
+      });
+      if (!res.ok) throw new Error('rehost failed');
+      const { url } = await res.json();
+      await preload(url);
+      el.querySelector('img')!.src = url;
+      await persist(el, {
+        kind: 'photo',
+        x: at.x,
+        y: at.y,
+        rotation,
+        scale: 1,
+        url,
+        caption: `${result.author}, ${result.source}`,
+        author: 'client',
+      });
+    } catch {
+      showHint('Could not add that image.');
+      el.remove();
+    } finally {
+      el.classList.remove('is-uploading');
+      ring.remove();
+    }
+  }
+
+  let searchSeq = 0;
+  async function runSearch(q: string) {
+    if (!stockGrid) return;
+    const seq = ++searchSeq;
+    stockGrid.innerHTML = '<p class="bd-stock__hint">Searching…</p>';
+    try {
+      const res = await fetch(`/api/images/${provider}?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (seq !== searchSeq) return;
+      if (!data.results?.length) {
+        stockGrid.innerHTML = '<p class="bd-stock__hint">Nothing found. Try another word.</p>';
+        return;
+      }
+      stockGrid.innerHTML = '';
+      data.results.forEach((r: any, i: number) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'bd-thumb__wrap';
+        wrap.style.setProperty('--i', String(Math.min(i, 24)));
+        const img = document.createElement('img');
+        img.className = 'bd-thumb';
+        img.src = r.thumb;
+        img.draggable = false;
+        img.loading = 'lazy';
+        const credit = document.createElement('span');
+        credit.className = 'bd-credit';
+        credit.textContent = `${r.author} / ${r.source}`;
+        wrap.append(img, credit);
+        stockGrid.appendChild(wrap);
+        wireStockThumb(wrap, r);
+      });
+    } catch {
+      if (seq === searchSeq) {
+        stockGrid.innerHTML = '<p class="bd-stock__hint">Search is unavailable right now.</p>';
+      }
+    }
+  }
+
+  drawer.querySelectorAll<HTMLElement>('[data-preset]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      drawer.querySelectorAll('[data-preset]').forEach((c) => c.classList.remove('is-active'));
+      chip.classList.add('is-active');
+      runSearch(chip.dataset.preset!);
+    });
+  });
+
+  const searchBox = document.querySelector<HTMLInputElement>('[data-stock-search]');
+  let searchTimer: number | undefined;
+  searchBox?.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const q = searchBox.value.trim();
+    if (q.length < 2) return;
+    searchTimer = window.setTimeout(() => runSearch(q), 400);
+  });
+  searchBox?.addEventListener('keydown', (e) => e.stopPropagation());
 
   // ---------- share ----------
   document.querySelector('[data-share]')?.addEventListener('click', async () => {

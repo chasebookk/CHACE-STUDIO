@@ -1,0 +1,244 @@
+---
+export const prerender = false;
+
+import Base from '../../layouts/Base.astro';
+import { query } from '../../lib/db';
+import { checkAdminAuth, unauthorized } from '../../lib/auth';
+import { siteUrl } from '../../lib/env';
+import type { BoardRow } from '../../lib/boards';
+
+if (!checkAdminAuth(Astro.request)) {
+  return unauthorized();
+}
+
+const { rows: boards } = await query<BoardRow & { items: number }>(
+  `SELECT b.*, (SELECT count(*)::int FROM board_items i WHERE i.board_id = b.id) AS items
+     FROM boards b ORDER BY b.updated_at DESC LIMIT 200`
+);
+
+const base = siteUrl();
+const justCreated = Astro.url.searchParams.get('new');
+const when = (iso: string) => {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} hr ago`;
+  return `${Math.round(hrs / 24)} days ago`;
+};
+---
+
+<Base title="Boards | CHACE STUDIOS" description="Admin" robots="noindex, nofollow">
+  <main class="ab">
+    <div class="ab__head">
+      <h1 class="display ab__title">Moodboards</h1>
+      <a href="/admin" class="ab__back">Back to bookings</a>
+    </div>
+
+    <form class="ab-new" method="POST" action="/api/admin/boards/create">
+      <label class="ab-field">
+        <span>Client name</span>
+        <input type="text" name="client_name" placeholder="Opeyemi Divine" required />
+      </label>
+      <label class="ab-field">
+        <span>Title, optional</span>
+        <input type="text" name="title" placeholder="Opeyemi Divine, Individual Portrait" />
+      </label>
+      <button type="submit" class="btn btn--fill ab-create">Create board</button>
+    </form>
+
+    {boards.length === 0 ? (
+      <p class="ab-empty">No boards yet. Create one above and send the client its link.</p>
+    ) : (
+      <div class="ab-list">
+        {boards.map((b) => (
+          <div class:list={['ab-row', { 'is-new': b.slug === justCreated }]}>
+            <div class="ab-row__main">
+              <span class="ab-row__client">{b.client_name}</span>
+              {b.title && <span class="ab-row__title">{b.title}</span>}
+              <span class="ab-row__meta">
+                {b.items} {b.items === 1 ? 'item' : 'items'} · active {when(b.updated_at)}
+              </span>
+            </div>
+            <div class="ab-row__actions">
+              <a class="ab-btn" href={`/board/${b.slug}`} target="_blank" rel="noopener">Open</a>
+              <button type="button" class="ab-btn ab-btn--copy" data-copy={`${base}/board/${b.slug}`}>
+                Copy link
+              </button>
+              <form
+                method="POST"
+                action="/api/admin/boards/delete"
+                onsubmit="return confirm('Delete this board? Its items and uploaded images are removed too.')"
+              >
+                <input type="hidden" name="id" value={b.id} />
+                <button type="submit" class="ab-btn ab-btn--danger">Delete</button>
+              </form>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </main>
+
+  <script>
+    document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(btn.dataset.copy ?? '');
+        const prev = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(() => (btn.textContent = prev), 1500);
+      });
+    });
+  </script>
+
+  <style>
+    .ab {
+      padding: 48px var(--pad) 96px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .ab__head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .ab__title {
+      font-size: clamp(28px, 4vw, 40px);
+      letter-spacing: -0.04em;
+      margin: 0;
+    }
+    .ab__back {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .ab__back:hover {
+      color: var(--white);
+    }
+
+    .ab-new {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      margin-bottom: 28px;
+    }
+    .ab-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1 1 240px;
+    }
+    .ab-field span {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .ab-field input {
+      height: 40px;
+      padding: 0 12px;
+      background: var(--card);
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      color: var(--white);
+      font-family: var(--font-body);
+      font-size: 14px;
+    }
+    .ab-create {
+      height: 40px;
+      flex: none;
+    }
+
+    .ab-empty {
+      color: var(--text-50);
+    }
+
+    .ab-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ab-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .ab-row.is-new {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 1px rgba(255, 106, 0, 0.4);
+    }
+    .ab-row__main {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+    .ab-row__client {
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .ab-row__title {
+      font-size: 13px;
+      color: var(--text-60);
+    }
+    .ab-row__meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .ab-row__actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: none;
+    }
+    .ab-btn {
+      display: inline-flex;
+      align-items: center;
+      height: 30px;
+      padding: 0 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      background: none;
+      color: var(--white);
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .ab-btn:hover {
+      border-color: var(--white);
+    }
+    .ab-btn--copy {
+      border-color: var(--orange);
+    }
+    .ab-btn--danger:hover {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    @media (max-width: 720px) {
+      .ab-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</Base>
