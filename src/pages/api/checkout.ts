@@ -13,6 +13,7 @@ import { toMin, toHHMM, slotIsFree, generateRef } from '../../lib/availability';
 import { isReturningPodcastClient } from '../../lib/returning';
 import { siteUrl } from '../../lib/env';
 import { checkRateLimit, clientIp } from '../../lib/rate-limit';
+import { getAgreedQuote } from '../../config/quotes';
 
 export const prerender = false;
 
@@ -59,6 +60,7 @@ export const POST: APIRoute = async ({ request }) => {
     studioId,
     address,
     notes,
+    quote: quoteId,
   } = body ?? {};
 
   const pkg = getPackage(String(slug ?? ''));
@@ -80,10 +82,17 @@ export const POST: APIRoute = async ({ request }) => {
   const startMin = toMin(String(time));
   const endMin = startMin + tier.durationMin;
 
-  // Price comes from config, never from the client. The returning-podcast
-  // rate is re-checked here so it cannot be forced from the browser.
+  // Price comes from config, never from the client. A privately agreed quote
+  // rate is looked up server side and only honoured when the package and tier
+  // match the quote, so pointing a quote id at a different tier does nothing.
   let totalPence = tier.pricePence;
   let tierLabel = tier.label;
+
+  const agreed = getAgreedQuote(typeof quoteId === 'string' ? quoteId : null);
+  if (agreed && agreed.packageSlug === pkg.slug && agreed.tierId === tier.id) {
+    totalPence = agreed.totalPence;
+    tierLabel = `${tier.label}, agreed rate`;
+  }
   if (pkg.returningPricePence && (await isReturningPodcastClient(String(email), phone ? String(phone) : null))) {
     totalPence = pkg.returningPricePence;
     tierLabel = `${tier.label}, returning client rate`;

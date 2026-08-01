@@ -6,6 +6,10 @@ interface Props {
   lockedSlug?: string;
   /** Lock further to a single tier (private client quotes). */
   lockedTierId?: string;
+  /** Private quote id, so the server can apply its agreed rate. */
+  quoteId?: string;
+  /** Agreed total for display, in pence. The server prices independently. */
+  agreedPricePence?: number;
   heading?: string;
   intro?: string;
   /** Optional personalised note rendered above the form. */
@@ -15,6 +19,8 @@ interface Props {
 const {
   lockedSlug,
   lockedTierId,
+  quoteId,
+  agreedPricePence,
   heading = 'Book a Shoot',
   intro = "Pick a package, choose an available time and pay securely: card, Apple Pay, Google Pay, Klarna, PayPal and Pay by Bank. Your slot is held for 30 minutes while you pay. Got a promo code? There's a box for it on the payment page.",
   note,
@@ -60,7 +66,7 @@ const bookingData = offered.map((p) => ({
 
     {note && <p class="bw-note reveal">{note}</p>}
 
-    <div class="pk-form reveal" id="bw">
+    <div class="pk-form reveal" id="bw" data-quote={quoteId ?? undefined} data-agreed={agreedPricePence ?? undefined}>
       <div class="pk-field" id="bw-package-wrap" hidden={!!lockedSlug}>
         <label class="pk-label" for="bw-package">Package <span>*</span></label>
         <select class="pk-input pk-select" id="bw-package"></select>
@@ -600,8 +606,13 @@ const bookingData = offered.map((p) => ({
     renderPrice();
   }
 
-  /** The rate actually charged, once any returning-client rate is known. */
+  // A privately agreed rate replaces the list price for this client. Display
+  // only: /api/checkout looks the same rate up server side.
+  const agreedPence = Number($('bw').dataset.agreed) || null;
+
+  /** The rate actually charged, once any override is known. */
   function effectivePrice(t: typeof packages[0]['tiers'][0]): number {
+    if (agreedPence != null) return agreedPence;
     return returningPricePence != null ? returningPricePence : t.pricePence;
   }
 
@@ -612,7 +623,14 @@ const bookingData = offered.map((p) => ({
     const parts: string[] = [];
 
     // Spell the saving out rather than showing only the final number.
-    if (returningPricePence != null) {
+    if (agreedPence != null) {
+      const listed = t.pricePence;
+      parts.push(
+        listed > agreedPence
+          ? `Your agreed rate: <strong>${fmt(agreedPence)}</strong>, normally ${fmt(listed)}. That saves you ${fmt(listed - agreedPence)}.`
+          : `Your agreed rate: <strong>${fmt(agreedPence)}</strong>.`
+      );
+    } else if (returningPricePence != null) {
       parts.push(`<strong>${fmt(total)}</strong> per episode, your returning client rate.`);
     } else if (t.discountPct && t.listPence) {
       parts.push(
@@ -912,6 +930,8 @@ const bookingData = offered.map((p) => ({
           studioId: atStudio ? studioSel.value : null,
           address,
           notes: $<HTMLTextAreaElement>('bw-notes').value.trim(),
+          // Advisory only: the server looks the agreed rate up itself.
+          quote: $('bw').dataset.quote ?? null,
         }),
       });
       const data = await res.json();

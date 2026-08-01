@@ -23,6 +23,7 @@ import Footer from '../../components/Footer.astro';
 import Slideshow from '../../components/Slideshow.astro';
 import BookingWidget from '../../components/BookingWidget.astro';
 import { getPackage, getTier, chargeNowPence } from '../../config/booking';
+import { getAgreedQuote, agreedSplit } from '../../config/quotes';
 import { EMAIL, INSTAGRAM } from '../../data/portfolio';
 
 const { quote } = Astro.props;
@@ -34,14 +35,26 @@ const { Content } = await render(quote);
 // Validated in getStaticPaths, so both are guaranteed present here.
 const pkg = getPackage(q.packageSlug)!;
 const tier = getTier(q.packageSlug, q.tierId)!;
-const depositPence = chargeNowPence(tier);
-const balancePence = tier.pricePence - depositPence;
+// A privately agreed rate overrides the list price for this client only.
+const agreed = getAgreedQuote(quote.id);
+const split = agreed
+  ? agreedSplit(agreed)
+  : {
+      totalPence: tier.pricePence,
+      depositPence: chargeNowPence(tier),
+      balancePence: tier.pricePence - chargeNowPence(tier),
+    };
+const totalPence = split.totalPence;
+const depositPence = split.depositPence;
+const balancePence = split.balancePence;
 const money = (p: number) => (p % 100 === 0 ? `£${p / 100}` : `£${(p / 100).toFixed(2)}`);
 
-const images = Array.from(
-  { length: q.imageCount },
-  (_, i) => `${q.imagesDir}/${quote.id}-${String(i + 1).padStart(2, '0')}.jpg`
-);
+const images =
+  q.images ??
+  Array.from(
+    { length: q.imageCount ?? 0 },
+    (_, i) => `${q.imagesDir}/${quote.id}-${String(i + 1).padStart(2, '0')}.jpg`
+  );
 ---
 
 <Base title={q.title} description={q.sub} robots="noindex, nofollow" ogImage={images[0]}>
@@ -58,8 +71,11 @@ const images = Array.from(
 
           <div class="qt-quote">
             <p class="qt-quote__line">
-              <span class="display qt-quote__amount">{money(tier.pricePence)}</span>
+              <span class="display qt-quote__amount">{money(totalPence)}</span>
               <span class="qt-quote__label">{pkg.title}, {tier.label}</span>
+              {agreed && (
+                <span class="qt-quote__was">normally {money(agreed.listPence)}, your agreed rate</span>
+              )}
             </p>
             {tier.includes && <p class="qt-quote__includes">{tier.includes}</p>}
           </div>
@@ -134,6 +150,8 @@ const images = Array.from(
     <BookingWidget
       lockedSlug={q.packageSlug}
       lockedTierId={q.tierId}
+      quoteId={agreed ? quote.id : undefined}
+      agreedPricePence={agreed ? totalPence : undefined}
       heading="Choose your date"
       intro="Pick a date and time that suits you and pay securely: card, Apple Pay, Google Pay, Klarna, PayPal and Pay by Bank. Your slot is held for 30 minutes while you pay."
     />
@@ -212,6 +230,15 @@ const images = Array.from(
     letter-spacing: 1px;
     color: var(--white);
   }
+  .qt-quote__was {
+    width: 100%;
+    font-size: 12.5px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+    color: var(--orange);
+  }
+
   .qt-quote__includes {
     margin: 8px 0 0;
     font-size: 13.5px;

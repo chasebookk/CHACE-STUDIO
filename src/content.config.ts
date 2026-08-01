@@ -22,9 +22,11 @@ const quotes = defineCollection({
     packageSlug: z.string(),
     tierId: z.string(),
 
-    /** Rotating reference panel. */
-    imagesDir: z.string(),
-    imageCount: z.number().int().positive(),
+    /** Rotating reference panel: either a folder plus a count, or an
+     *  explicit list of image paths. */
+    imagesDir: z.string().optional(),
+    imageCount: z.number().int().positive().optional(),
+    images: z.array(z.string()).optional(),
     imageCaption: z.string().default('Reference direction for your session'),
 
     /** Highlighted note under the price. */
