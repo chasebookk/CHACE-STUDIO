@@ -638,17 +638,18 @@ const PRESETS = [
     max-height: 92px;
     overflow-y: auto;
   }
-  .bd-stock__hint {
+  .bd-drawer__grid :global(.bd-stock__hint) {
     grid-column: 1 / -1;
     margin: 8px 0;
     font-family: var(--font-mono);
     font-size: 11px;
     color: rgba(255, 255, 255, 0.35);
   }
-  .bd-thumb__wrap {
+  .bd-drawer__grid :global(.bd-thumb__wrap) {
     position: relative;
+    line-height: 0;
   }
-  .bd-credit {
+  .bd-drawer__grid :global(.bd-credit) {
     position: absolute;
     left: 0;
     right: 0;
@@ -666,7 +667,7 @@ const PRESETS = [
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .bd-thumb__wrap:hover .bd-credit {
+  .bd-drawer__grid :global(.bd-thumb__wrap:hover .bd-credit) {
     opacity: 1;
   }
 
@@ -679,7 +680,7 @@ const PRESETS = [
     gap: 8px;
     padding: 0 16px 20px;
   }
-  .bd-thumb {
+  .bd-drawer__grid :global(.bd-thumb) {
     width: 100%;
     aspect-ratio: 4 / 5;
     object-fit: cover;
@@ -688,11 +689,11 @@ const PRESETS = [
     background: #1a1a1a;
     transition: transform 0.18s ease, box-shadow 0.18s ease;
   }
-  .bd-thumb:hover {
+  .bd-drawer__grid :global(.bd-thumb:hover) {
     transform: translateY(-3px) scale(1.03);
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.5);
   }
-  .bd-thumb[hidden] {
+  .bd-drawer__grid :global(.bd-thumb[hidden]) {
     display: none;
   }
 
@@ -707,7 +708,7 @@ const PRESETS = [
       transform: none;
     }
   }
-  .bd-drawer.is-open .bd-thumb {
+  .bd-drawer.is-open .bd-drawer__grid :global(.bd-thumb) {
     animation: bd-thumb-in 0.34s ease-out backwards;
     animation-delay: calc(var(--i) * 18ms);
   }
@@ -794,7 +795,7 @@ const PRESETS = [
     .bd-drawer.is-open .bd-thumb {
       animation: none;
     }
-    .bd-thumb:hover {
+    .bd-drawer__grid :global(.bd-thumb:hover) {
       transform: none;
     }
   }
@@ -852,17 +853,18 @@ const PRESETS = [
     max-height: 92px;
     overflow-y: auto;
   }
-  .bd-stock__hint {
+  .bd-drawer__grid :global(.bd-stock__hint) {
     grid-column: 1 / -1;
     margin: 8px 0;
     font-family: var(--font-mono);
     font-size: 11px;
     color: rgba(255, 255, 255, 0.35);
   }
-  .bd-thumb__wrap {
+  .bd-drawer__grid :global(.bd-thumb__wrap) {
     position: relative;
+    line-height: 0;
   }
-  .bd-credit {
+  .bd-drawer__grid :global(.bd-credit) {
     position: absolute;
     left: 0;
     right: 0;
@@ -880,7 +882,7 @@ const PRESETS = [
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .bd-thumb__wrap:hover .bd-credit {
+  .bd-drawer__grid :global(.bd-thumb__wrap:hover .bd-credit) {
     opacity: 1;
   }
 
