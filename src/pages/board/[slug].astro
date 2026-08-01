@@ -1908,6 +1908,10 @@ const PRESETS = [
       const { url } = await res.json();
       await preload(url);
       el.querySelector('img')!.src = url;
+      // Show the credit straight away rather than only after a reload.
+      const credit = `${result.author}, ${result.source}`;
+      const cap = el.querySelector<HTMLElement>('[data-caption]');
+      if (cap && !cap.textContent?.trim()) cap.textContent = credit;
       await persist(el, {
         kind: 'photo',
         x: at.x,
@@ -1915,7 +1919,7 @@ const PRESETS = [
         rotation,
         scale: 1,
         url,
-        caption: `${result.author}, ${result.source}`,
+        caption: credit,
         author: 'client',
       });
     } catch {
