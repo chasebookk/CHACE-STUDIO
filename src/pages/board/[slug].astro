@@ -3,6 +3,7 @@ export const prerender = false;
 
 import Base from '../../layouts/Base.astro';
 import { getBoard, getBoardItems } from '../../lib/boards';
+import { images } from '../../data/portfolio';
 
 const slug = String(Astro.params.slug ?? '');
 const board = await getBoard(slug);
@@ -10,6 +11,22 @@ if (!board) return Astro.redirect('/', 302);
 
 const items = await getBoardItems(board.id);
 const NOTE_COLOURS = ['#FFA600', '#FF1909', '#F5F1E8', '#0a0a0a'];
+
+// The studio's own frames, ready to be dragged onto any board.
+const PORTFOLIO = [
+  { id: 'portraits', label: 'Portraits' },
+  { id: 'headshots', label: 'Headshots' },
+  { id: 'events', label: 'Events' },
+  { id: 'weddings', label: 'Weddings' },
+  { id: 'pre-wedding', label: 'Pre-Wedding' },
+  { id: 'family', label: 'Family' },
+  { id: 'baby-shoots', label: 'Kids' },
+  { id: 'graduation', label: 'Graduation' },
+  { id: 'fashion', label: 'Fashion' },
+  { id: 'bridal-shower', label: 'Bridal' },
+].map((c) => ({ ...c, srcs: images(c.id) }));
+
+const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, category: c.id })));
 ---
 
 <Base
@@ -24,6 +41,9 @@ const NOTE_COLOURS = ['#FFA600', '#FF1909', '#F5F1E8', '#0a0a0a'];
         <span class="bd-client">{board.title ?? board.client_name}</span>
       </div>
       <div class="bd-bar__right">
+        <button type="button" class="bd-tool" data-drawer-toggle aria-expanded="false" title="My portfolio">
+          Portfolio
+        </button>
         <button type="button" class="bd-tool" data-add-note title="Add a note">
           <span class="bd-tool__dot" style="background:#FFA600"></span> Note
         </button>
@@ -34,6 +54,38 @@ const NOTE_COLOURS = ['#FFA600', '#FF1909', '#F5F1E8', '#0a0a0a'];
         <button type="button" class="bd-tool bd-tool--share" data-share>Copy link</button>
       </div>
     </header>
+
+    <!-- Slide-out tray of studio frames. Drag one onto the board, or tap to
+         drop it in the middle. -->
+    <aside class="bd-drawer" data-drawer aria-hidden="true">
+      <div class="bd-drawer__head">
+        <span class="bd-drawer__title">My portfolio</span>
+        <button type="button" class="bd-drawer__close" data-drawer-close aria-label="Close portfolio">&times;</button>
+      </div>
+
+      <div class="bd-drawer__filters">
+        <button type="button" class="bd-chip is-active" data-filter="all">All</button>
+        {PORTFOLIO.map((c) => (
+          <button type="button" class="bd-chip" data-filter={c.id}>{c.label}</button>
+        ))}
+      </div>
+
+      <div class="bd-drawer__grid" data-drawer-grid>
+        {PORTFOLIO_FLAT.map((img, i) => (
+          <img
+            class="bd-thumb"
+            src={img.src}
+            alt=""
+            draggable="false"
+            loading="lazy"
+            decoding="async"
+            data-src={img.src}
+            data-category={img.category}
+            style={`--i:${Math.min(i, 24)}`}
+          />
+        ))}
+      </div>
+    </aside>
 
     <!-- The board itself. Pan by dragging empty space, zoom with scroll or pinch. -->
     <div class="bd-viewport" data-viewport>
@@ -368,6 +420,144 @@ const NOTE_COLOURS = ['#FFA600', '#FF1909', '#F5F1E8', '#0a0a0a'];
     pointer-events: none;
   }
 
+  /* ---- Portfolio drawer ---- */
+  .bd-drawer {
+    position: absolute;
+    top: 60px;
+    bottom: 0;
+    left: 0;
+    z-index: 25;
+    width: 320px;
+    max-width: 84vw;
+    display: flex;
+    flex-direction: column;
+    background: rgba(16, 16, 16, 0.96);
+    backdrop-filter: blur(14px);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    transform: translateX(-101%);
+    /* Springy, so the tray feels like it is thrown open. */
+    transition: transform 0.42s cubic-bezier(0.22, 1.2, 0.36, 1);
+  }
+  .bd-drawer.is-open {
+    transform: translateX(0);
+  }
+
+  .bd-drawer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 10px;
+  }
+  .bd-drawer__title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .bd-drawer__close {
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .bd-drawer__close:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .bd-drawer__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 16px 12px;
+  }
+  .bd-chip {
+    height: 26px;
+    padding: 0 11px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 9999px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.65);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  .bd-chip:hover {
+    color: var(--white);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+  .bd-chip.is-active {
+    background: var(--grad-accent);
+    border-color: transparent;
+    color: var(--white);
+  }
+
+  .bd-drawer__grid {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 0 16px 20px;
+  }
+  .bd-thumb {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border-radius: 4px;
+    cursor: grab;
+    background: #1a1a1a;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .bd-thumb:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.5);
+  }
+  .bd-thumb[hidden] {
+    display: none;
+  }
+
+  /* Stagger the frames in when the tray opens. */
+  @keyframes bd-thumb-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.94);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .bd-drawer.is-open .bd-thumb {
+    animation: bd-thumb-in 0.34s ease-out backwards;
+    animation-delay: calc(var(--i) * 18ms);
+  }
+
+  /* The frame that follows the cursor between tray and board. */
+  .bd-ghost {
+    position: fixed;
+    z-index: 60;
+    width: 150px;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border-radius: 3px;
+    padding: 7px 7px 0;
+    background: #f7f4ee;
+    box-shadow: 0 22px 44px rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+    transform: translate(-50%, -50%) rotate(-3deg);
+  }
+
   .bd-hint {
     position: absolute;
     bottom: 18px;
@@ -404,9 +594,24 @@ const NOTE_COLOURS = ['#FFA600', '#FF1909', '#F5F1E8', '#0a0a0a'];
     .bd-shimmer {
       animation: none;
     }
+    .bd-drawer {
+      transition: none;
+    }
+    .bd-drawer.is-open .bd-thumb {
+      animation: none;
+    }
+    .bd-thumb:hover {
+      transform: none;
+    }
   }
 
   @media (max-width: 720px) {
+    .bd-drawer {
+      width: 280px;
+    }
+    .bd-drawer__grid {
+      grid-template-columns: 1fr 1fr;
+    }
     .bd-client {
       display: none;
     }
@@ -922,6 +1127,101 @@ const NOTE_COLOURS = ['#FFA600', '#FF1909', '#F5F1E8', '#0a0a0a'];
     } catch {
       showHint('Could not add that note.');
     }
+  });
+
+  // ---------- portfolio drawer ----------
+  const drawer = document.querySelector<HTMLElement>('[data-drawer]')!;
+  const drawerToggle = document.querySelector<HTMLButtonElement>('[data-drawer-toggle]')!;
+
+  function setDrawer(open: boolean) {
+    drawer.classList.toggle('is-open', open);
+    drawer.setAttribute('aria-hidden', String(!open));
+    drawerToggle.setAttribute('aria-expanded', String(open));
+  }
+  drawerToggle.addEventListener('click', () => setDrawer(!drawer.classList.contains('is-open')));
+  document.querySelector('[data-drawer-close]')?.addEventListener('click', () => setDrawer(false));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && drawer.classList.contains('is-open')) setDrawer(false);
+  });
+
+  // Filter chips
+  drawer.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      drawer.querySelectorAll('[data-filter]').forEach((c) => c.classList.remove('is-active'));
+      chip.classList.add('is-active');
+      const wanted = chip.dataset.filter;
+      let shown = 0;
+      drawer.querySelectorAll<HTMLImageElement>('.bd-thumb').forEach((thumb) => {
+        const match = wanted === 'all' || thumb.dataset.category === wanted;
+        thumb.hidden = !match;
+        // Restagger only what is visible, so the reveal stays quick.
+        if (match) thumb.style.setProperty('--i', String(Math.min(shown++, 24)));
+      });
+    });
+  });
+
+  /** Place a studio frame on the board at a world position. */
+  async function dropPortfolio(src: string, at: { x: number; y: number }) {
+    try {
+      const item = await createItem({
+        kind: 'photo',
+        x: at.x,
+        y: at.y,
+        rotation: Number((Math.random() * 7 - 3.5).toFixed(2)),
+        scale: 1,
+        url: src,
+        author: 'studio',
+      });
+      renderItem(item);
+    } catch {
+      showHint('Could not add that frame.');
+    }
+  }
+
+  // Pointer based rather than HTML5 drag, so the same gesture works with a
+  // mouse, a trackpad and a finger.
+  drawer.querySelectorAll<HTMLImageElement>('.bd-thumb').forEach((thumb) => {
+    thumb.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const src = thumb.dataset.src!;
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let ghost: HTMLImageElement | null = null;
+      thumb.setPointerCapture(e.pointerId);
+
+      const onMove = (ev: PointerEvent) => {
+        if (!ghost && Math.hypot(ev.clientX - startX, ev.clientY - startY) > 6) {
+          ghost = document.createElement('img');
+          ghost.className = 'bd-ghost';
+          ghost.src = src;
+          document.body.appendChild(ghost);
+        }
+        if (ghost) {
+          ghost.style.left = `${ev.clientX}px`;
+          ghost.style.top = `${ev.clientY}px`;
+        }
+      };
+
+      const onUp = (ev: PointerEvent) => {
+        thumb.removeEventListener('pointermove', onMove);
+        thumb.removeEventListener('pointerup', onUp);
+        ghost?.remove();
+
+        const overCanvas =
+          ev.clientX > drawer.getBoundingClientRect().right ||
+          !drawer.classList.contains('is-open');
+
+        if (ghost && overCanvas) {
+          dropPortfolio(src, toWorld(ev.clientX, ev.clientY));
+        } else if (!ghost) {
+          // A tap with no travel drops it into the middle of the view.
+          dropPortfolio(src, toWorld(window.innerWidth / 2, window.innerHeight / 2));
+        }
+      };
+
+      thumb.addEventListener('pointermove', onMove);
+      thumb.addEventListener('pointerup', onUp);
+    });
   });
 
   // ---------- share ----------
