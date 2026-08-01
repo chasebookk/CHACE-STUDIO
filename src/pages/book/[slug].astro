@@ -23,12 +23,19 @@ if (!card || !bookable || card.enquiryOnly) {
 // Personalisation, length-capped so a long link can't wreck the layout.
 const clip = (v: string | null, max: number) => (v ? v.trim().slice(0, max) : '');
 const preparedFor = clip(Astro.url.searchParams.get('for'), 80);
+
+// ?tier=2-looks preselects and locks a specific option, so an agreed rate
+// cannot be applied to the wrong tier by mistake. Ignored if unrecognised.
+const requestedTier = clip(Astro.url.searchParams.get('tier'), 40);
+const lockedTier = requestedTier
+  ? bookable.tiers.find((t) => t.id === requestedTier)
+  : undefined;
 const note = clip(Astro.url.searchParams.get('note'), 400);
 
 const money = (p: number) => (p % 100 === 0 ? `£${p / 100}` : `£${(p / 100).toFixed(2)}`);
 
 // Deposit vs full payment, straight from the booking config.
-const tierTerms = bookable.tiers.map((t) => ({
+const tierTerms = (lockedTier ? [lockedTier] : bookable.tiers).map((t) => ({
   label: t.label,
   price: money(t.pricePence),
   duration: `${t.durationMin} min`,
@@ -130,6 +137,7 @@ const title = `${card.title}, Book with CHACE STUDIOS`;
 
     <BookingWidget
       lockedSlug={card.slug}
+      lockedTierId={lockedTier?.id}
       heading="Book your session"
       intro="Choose a date and time below and pay securely: card, Apple Pay, Google Pay, Klarna, PayPal and Pay by Bank. Your slot is held for 30 minutes while you pay."
       note={note || undefined}
