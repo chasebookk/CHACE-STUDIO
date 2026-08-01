@@ -51,6 +51,7 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
           Add images
         </button>
         <input type="file" accept="image/*" multiple hidden data-file-input />
+        <button type="button" class="bd-tool" data-fit title="Fit the board to view, or press F">Fit</button>
         <button type="button" class="bd-tool bd-tool--share" data-share>Copy link</button>
       </div>
     </header>
@@ -131,6 +132,8 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
         </p>
       )}
     </div>
+
+    <canvas class="bd-map" data-map width="320" height="220" title="Board overview, click to jump"></canvas>
 
     <div class="bd-hint" data-hint hidden></div>
 
@@ -405,6 +408,55 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
     }
   }
 
+  /* An uploading card is fully visible from the first frame; the ring only
+     says that the copy on the server is still catching up. */
+  .bd-item.is-uploading .bd-photo img {
+    filter: saturate(0.85);
+  }
+  .bd-progress {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    border-top-color: #ff6a00;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    animation: bd-spin 0.8s linear infinite;
+  }
+  @keyframes bd-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .bd-item.is-failed .bd-photo {
+    box-shadow: 0 0 0 2px var(--red), 0 10px 24px rgba(0, 0, 0, 0.45);
+  }
+  .bd-retry {
+    position: absolute;
+    left: 50%;
+    bottom: 44px;
+    transform: translateX(-50%);
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 9999px;
+    background: var(--red);
+    color: #fff;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .bd-photo {
+    position: relative;
+  }
+
   .bd-empty {
     position: absolute;
     top: 50%;
@@ -558,6 +610,30 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
     transform: translate(-50%, -50%) rotate(-3deg);
   }
 
+  /* ---- Minimap ---- */
+  .bd-map {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    z-index: 28;
+    width: 160px;
+    height: 110px;
+    border-radius: 10px;
+    background: rgba(20, 20, 20, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    touch-action: none;
+  }
+  @media (max-width: 720px) {
+    .bd-map {
+      width: 116px;
+      height: 80px;
+      right: 10px;
+      bottom: 10px;
+    }
+  }
+
   .bd-hint {
     position: absolute;
     bottom: 18px;
@@ -591,7 +667,8 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
     .bd-item--entering {
       animation: none;
     }
-    .bd-shimmer {
+    .bd-shimmer,
+    .bd-progress {
       animation: none;
     }
     .bd-drawer {
@@ -632,6 +709,10 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
   const grid = document.querySelector<HTMLElement>('[data-grid]')!;
   const hint = document.querySelector<HTMLElement>('[data-hint]')!;
   const fileInput = document.querySelector<HTMLInputElement>('[data-file-input]')!;
+  // Declared here because drawMap is hoisted and called from applyTransform,
+  // which runs before the navigation section is reached.
+  const map = document.querySelector<HTMLCanvasElement>('[data-map]')!;
+  const mapCtx = map.getContext('2d')!;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const NOTE_COLOURS = (document.querySelector('[data-note-colours]')?.textContent ?? '')
@@ -642,12 +723,18 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
   let panX = 0;
   let panY = 0;
   let zoom = 1;
+  const MIN_ZOOM = 0.25;
+  const MAX_ZOOM = 3;
+  // applyTransform runs before the navigation section is reached, so the
+  // minimap only starts redrawing once its state actually exists.
+  let mapReady = false;
 
   function applyTransform() {
     world.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
     // Grid drifts at half speed, which gives the board a sense of depth.
     grid.style.backgroundPosition = `${panX * 0.5}px ${panY * 0.5}px`;
     grid.style.backgroundSize = `${26 * zoom}px ${26 * zoom}px`;
+    if (mapReady) drawMap();
   }
 
   // Start with the origin near the middle so the first drop is comfortable.
@@ -695,8 +782,13 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
 
   viewport.addEventListener('pointermove', (e) => {
     if (!panning || e.pointerId !== panPointer) return;
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
+    let dx = e.clientX - lastX;
+    let dy = e.clientY - lastY;
+    // Past the edge of the content the board pushes back, so you can feel
+    // that you have gone too far rather than drifting into nothing.
+    const over = overshoot();
+    if (over.x && Math.sign(over.x) === -Math.sign(dx)) dx *= 0.35;
+    if (over.y && Math.sign(over.y) === -Math.sign(dy)) dy *= 0.35;
     panX += dx;
     panY += dy;
     vx = dx;
@@ -710,11 +802,17 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
     if (!panning) return;
     panning = false;
     viewport.classList.remove('is-panning');
-    if (reduceMotion) return;
+    if (reduceMotion) {
+      springBack();
+      return;
+    }
     const glide = () => {
       vx *= 0.94;
       vy *= 0.94;
-      if (Math.abs(vx) < 0.15 && Math.abs(vy) < 0.15) return;
+      if (Math.abs(vx) < 0.15 && Math.abs(vy) < 0.15) {
+        springBack();
+        return;
+      }
       panX += vx;
       panY += vy;
       applyTransform();
@@ -727,7 +825,7 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
 
   // ---------- zoom ----------
   function zoomAt(clientX: number, clientY: number, factor: number) {
-    const next = Math.min(3, Math.max(0.2, zoom * factor));
+    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
     const rect = viewport.getBoundingClientRect();
     const px = clientX - rect.left;
     const py = clientY - rect.top;
@@ -783,18 +881,30 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
   viewport.addEventListener('pointercancel', dropPinch);
 
   // ---------- saving ----------
-  const pending = new Map<number, Record<string, unknown>>();
-  const timers = new Map<number, number>();
+  // Items render from local state immediately and are persisted in the
+  // background, so nothing the user does ever waits on the network. Until the
+  // server returns a real id the element carries a temporary one, and any
+  // edits made in that window are held and flushed once the id arrives.
+  const realId = new WeakMap<HTMLElement, Promise<number>>();
+  const pending = new Map<HTMLElement, Record<string, unknown>>();
+  const timers = new Map<HTMLElement, number>();
 
-  function save(id: number, patch: Record<string, unknown>) {
-    pending.set(id, { ...(pending.get(id) ?? {}), ...patch });
-    window.clearTimeout(timers.get(id));
+  function idOf(el: HTMLElement): Promise<number> {
+    const known = Number(el.dataset.id);
+    if (Number.isFinite(known) && known > 0) return Promise.resolve(known);
+    return realId.get(el) ?? Promise.reject(new Error('item never persisted'));
+  }
+
+  function save(el: HTMLElement, patch: Record<string, unknown>) {
+    pending.set(el, { ...(pending.get(el) ?? {}), ...patch });
+    window.clearTimeout(timers.get(el));
     timers.set(
-      id,
+      el,
       window.setTimeout(async () => {
-        const body = pending.get(id);
-        pending.delete(id);
+        const body = pending.get(el);
+        pending.delete(el);
         try {
+          const id = await idOf(el);
           const res = await fetch(`/api/board/${slug}/items/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -808,14 +918,21 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
     );
   }
 
-  async function createItem(data: Record<string, unknown>) {
-    const res = await fetch(`/api/board/${slug}/items`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error('create failed');
-    return (await res.json()).item;
+  /** Persist a freshly created item and attach its real id to the element. */
+  function persist(el: HTMLElement, data: Record<string, unknown>): Promise<number> {
+    const p = (async () => {
+      const res = await fetch(`/api/board/${slug}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('create failed');
+      const item = (await res.json()).item;
+      el.dataset.id = String(item.id);
+      return item.id as number;
+    })();
+    realId.set(el, p);
+    return p;
   }
 
   // ---------- item behaviour ----------
@@ -830,7 +947,7 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
   function bringToFront(el: HTMLElement) {
     topZ += 1;
     el.style.zIndex = String(topZ);
-    save(Number(el.dataset.id), { z: topZ });
+    save(el, { z: topZ });
   }
 
   /** A small random tilt on drop, so the board always looks hand arranged. */
@@ -839,15 +956,9 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
   function wireItem(el: HTMLElement) {
     const del = el.querySelector<HTMLButtonElement>('[data-del]');
     del?.addEventListener('pointerdown', (e) => e.stopPropagation());
-    del?.addEventListener('click', async (e) => {
+    del?.addEventListener('click', (e) => {
       e.stopPropagation();
-      const id = Number(el.dataset.id);
-      el.remove();
-      try {
-        await fetch(`/api/board/${slug}/items/${id}`, { method: 'DELETE' });
-      } catch {
-        showHint('Could not remove that item.');
-      }
+      removeItem(el);
     });
 
     // Editable caption or note body.
@@ -855,7 +966,7 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
     if (cap) {
       cap.addEventListener('blur', () => {
         cap.contentEditable = 'false';
-        save(Number(el.dataset.id), { caption: cap.textContent ?? '' });
+        save(el, { caption: cap.textContent ?? '' });
       });
       cap.addEventListener('keydown', (e) => {
         e.stopPropagation();
@@ -896,6 +1007,7 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
         el.dataset.y = String(ny);
         el.style.setProperty('--x', `${nx}px`);
         el.style.setProperty('--y', `${ny}px`);
+        drawMap();
 
         // Tilt slightly in the direction of travel while carried.
         if (!reduceMotion) {
@@ -916,7 +1028,7 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
           const rot = settleRotation();
           el.dataset.rot = rot;
           el.style.setProperty('--rot', `${rot}deg`);
-          save(Number(el.dataset.id), {
+          save(el, {
             x: Number(el.dataset.x),
             y: Number(el.dataset.y),
             rotation: Number(rot),
@@ -924,17 +1036,7 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
         } else {
           el.style.setProperty('--rot', `${baseRot}deg`);
           // A click that did not travel: edit the caption under the cursor.
-          const target = startTarget.closest<HTMLElement>('[data-caption]');
-          if (target) {
-            target.contentEditable = 'true';
-            target.focus();
-            const range = document.createRange();
-            range.selectNodeContents(target);
-            range.collapse(false);
-            const sel = window.getSelection();
-            sel?.removeAllRanges();
-            sel?.addRange(range);
-          }
+          if (startTarget.closest('[data-caption]')) focusCaption(el);
         }
       };
 
@@ -945,24 +1047,44 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
 
   [...world.children].forEach((el) => wireItem(el as HTMLElement));
 
-  document.addEventListener('keydown', async (e) => {
-    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
-    if (!selected || (e.target as HTMLElement).isContentEditable) return;
-    const id = Number(selected.dataset.id);
-    selected.remove();
-    selected = null;
+  async function removeItem(el: HTMLElement) {
+    el.remove();
+    drawMap();
+    if (selected === el) selected = null;
     try {
+      const id = await idOf(el);
       await fetch(`/api/board/${slug}/items/${id}`, { method: 'DELETE' });
     } catch {
-      showHint('Could not remove that item.');
+      // An item that never reached the server has nothing to delete.
     }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+    if (!selected || (e.target as HTMLElement).isContentEditable) return;
+    removeItem(selected);
   });
+
+  /** Put the caret into an item's caption or note body. */
+  function focusCaption(el: HTMLElement) {
+    const target = el.querySelector<HTMLElement>('[data-caption]');
+    if (!target) return;
+    target.contentEditable = 'true';
+    target.focus();
+    const range = document.createRange();
+    range.selectNodeContents(target);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  }
 
   // ---------- rendering new items ----------
   function renderItem(item: any, entering = true): HTMLElement {
     const el = document.createElement('div');
     el.className = `bd-item bd-item--${item.kind}${entering && !reduceMotion ? ' bd-item--entering' : ''}`;
-    el.dataset.id = String(item.id);
+    // A local item has no server id yet; save() waits for one before flushing.
+    if (item.id != null) el.dataset.id = String(item.id);
     el.dataset.kind = item.kind;
     el.dataset.x = String(item.x);
     el.dataset.y = String(item.y);
@@ -1007,8 +1129,236 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
     world.appendChild(el);
     wireItem(el);
     document.querySelector('[data-empty]')?.remove();
+    drawMap();
     return el;
   }
+
+  // ---------- navigation ----------
+  /** World-space bounding box of everything on the board. */
+  function contentBounds() {
+    const items = [...world.querySelectorAll<HTMLElement>('.bd-item')];
+    if (!items.length) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const el of items) {
+      const x = Number(el.dataset.x) || 0;
+      const y = Number(el.dataset.y) || 0;
+      const halfW = (el.offsetWidth || 260) / 2;
+      const halfH = (el.offsetHeight || 220) / 2;
+      minX = Math.min(minX, x - halfW);
+      maxX = Math.max(maxX, x + halfW);
+      minY = Math.min(minY, y - halfH);
+      maxY = Math.max(maxY, y + halfH);
+    }
+    return { minX, minY, maxX, maxY };
+  }
+
+  const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+  function animateCamera(toPanX: number, toPanY: number, toZoom: number, ms = 900) {
+    if (reduceMotion) {
+      panX = toPanX; panY = toPanY; zoom = toZoom;
+      applyTransform();
+      return;
+    }
+    const fromX = panX, fromY = panY, fromZoom = zoom;
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / ms);
+      const e = easeInOut(t);
+      panX = fromX + (toPanX - fromX) * e;
+      panY = fromY + (toPanY - fromY) * e;
+      zoom = fromZoom + (toZoom - fromZoom) * e;
+      applyTransform();
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  /** Frame everything on the board, with breathing room. */
+  function fitToContent(ms = 900) {
+    const b = contentBounds();
+    const vw = viewport.clientWidth;
+    const vh = viewport.clientHeight;
+    if (!b) {
+      animateCamera(vw / 2, vh / 2, 1, ms);
+      return;
+    }
+    const pad = 120;
+    const w = b.maxX - b.minX + pad * 2;
+    const h = b.maxY - b.minY + pad * 2;
+    const target = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(vw / w, vh / h, 1.4)));
+    const cx = (b.minX + b.maxX) / 2;
+    const cy = (b.minY + b.maxY) / 2;
+    animateCamera(vw / 2 - cx * target, vh / 2 - cy * target, target, ms);
+  }
+
+  document.querySelector('[data-fit]')?.addEventListener('click', () => fitToContent());
+  document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() !== 'f') return;
+    if ((e.target as HTMLElement).isContentEditable) return;
+    fitToContent();
+  });
+
+  /** How far the camera centre may stray past the content before it resists. */
+  function panLimits() {
+    const b = contentBounds();
+    const vw = viewport.clientWidth / zoom;
+    const vh = viewport.clientHeight / zoom;
+    // Keep at least this much of the content on screen at the extremes, so
+    // the board can never be panned entirely out of sight.
+    const KEEP = 160;
+    const slackX = Math.max(0, vw / 2 - KEEP);
+    const slackY = Math.max(0, vh / 2 - KEEP);
+    if (!b) return { minX: -slackX, maxX: slackX, minY: -slackY, maxY: slackY };
+    return {
+      minX: b.minX - slackX,
+      maxX: b.maxX + slackX,
+      minY: b.minY - slackY,
+      maxY: b.maxY + slackY,
+    };
+  }
+
+  function viewCentre() {
+    const r = viewport.getBoundingClientRect();
+    return toWorld(r.left + viewport.clientWidth / 2, r.top + viewport.clientHeight / 2);
+  }
+
+  /** Distance the centre currently sits outside the allowed region. */
+  function overshoot() {
+    const c = viewCentre();
+    const l = panLimits();
+    return {
+      x: c.x < l.minX ? c.x - l.minX : c.x > l.maxX ? c.x - l.maxX : 0,
+      y: c.y < l.minY ? c.y - l.minY : c.y > l.maxY ? c.y - l.maxY : 0,
+    };
+  }
+
+  /** Would any item be on screen if the camera centre were here? */
+  function itemVisibleFrom(cx: number, cy: number) {
+    const vw = viewport.clientWidth / zoom;
+    const vh = viewport.clientHeight / zoom;
+    const l = cx - vw / 2, r = cx + vw / 2, t = cy - vh / 2, b = cy + vh / 2;
+    return [...world.querySelectorAll<HTMLElement>('.bd-item')].some((el) => {
+      const x = Number(el.dataset.x) || 0;
+      const y = Number(el.dataset.y) || 0;
+      const hw = (el.offsetWidth || 260) / 2;
+      const hh = (el.offsetHeight || 220) / 2;
+      return x + hw > l && x - hw < r && y + hh > t && y - hh < b;
+    });
+  }
+
+  /**
+   * Ease the camera back toward the board. Clamping to the bounding box is
+   * not enough on its own: pan diagonally and you can sit in an empty corner
+   * of that box with nothing on screen, so if nothing would be visible we
+   * pull to the nearest item instead.
+   */
+  function springBack() {
+    const over = overshoot();
+    const c = viewCentre();
+    let targetX = c.x - over.x;
+    let targetY = c.y - over.y;
+
+    if (!itemVisibleFrom(targetX, targetY)) {
+      const items = [...world.querySelectorAll<HTMLElement>('.bd-item')];
+      if (items.length) {
+        let best = items[0];
+        let bestD = Infinity;
+        for (const el of items) {
+          const d = Math.hypot((Number(el.dataset.x) || 0) - c.x, (Number(el.dataset.y) || 0) - c.y);
+          if (d < bestD) {
+            bestD = d;
+            best = el;
+          }
+        }
+        targetX = Number(best.dataset.x) || 0;
+        targetY = Number(best.dataset.y) || 0;
+      }
+    }
+
+    if (Math.abs(targetX - c.x) < 0.5 && Math.abs(targetY - c.y) < 0.5) return;
+    animateCamera(
+      panX + (c.x - targetX) * zoom,
+      panY + (c.y - targetY) * zoom,
+      zoom,
+      480
+    );
+  }
+
+  // ---------- minimap ----------
+  let mapFrame = 0;
+  function drawMap() {
+    cancelAnimationFrame(mapFrame);
+    mapFrame = requestAnimationFrame(() => {
+      const w = map.width;
+      const h = map.height;
+      mapCtx.clearRect(0, 0, w, h);
+
+      const b = contentBounds();
+      const c = viewCentre();
+      const vw = viewport.clientWidth / zoom;
+      const vh = viewport.clientHeight / zoom;
+
+      // Frame both the content and where the camera currently is, so the
+      // viewport rectangle is always visible even out in empty space.
+      const box = b
+        ? {
+            minX: Math.min(b.minX, c.x - vw / 2),
+            maxX: Math.max(b.maxX, c.x + vw / 2),
+            minY: Math.min(b.minY, c.y - vh / 2),
+            maxY: Math.max(b.maxY, c.y + vh / 2),
+          }
+        : { minX: c.x - vw, maxX: c.x + vw, minY: c.y - vh, maxY: c.y + vh };
+
+      const pad = 60;
+      const bw = box.maxX - box.minX + pad * 2;
+      const bh = box.maxY - box.minY + pad * 2;
+      const s = Math.min(w / bw, h / bh);
+      const ox = (w - bw * s) / 2 - (box.minX - pad) * s;
+      const oy = (h - bh * s) / 2 - (box.minY - pad) * s;
+      (drawMap as any)._proj = { s, ox, oy };
+
+      // viewport rectangle
+      mapCtx.strokeStyle = 'rgba(255,255,255,0.5)';
+      mapCtx.lineWidth = 2;
+      mapCtx.strokeRect((c.x - vw / 2) * s + ox, (c.y - vh / 2) * s + oy, vw * s, vh * s);
+
+      // items
+      for (const el of world.querySelectorAll<HTMLElement>('.bd-item')) {
+        const x = (Number(el.dataset.x) || 0) * s + ox;
+        const y = (Number(el.dataset.y) || 0) * s + oy;
+        mapCtx.fillStyle = el.dataset.kind === 'note' ? '#FFA600' : '#f7f4ee';
+        mapCtx.beginPath();
+        mapCtx.arc(x, y, 3.4, 0, Math.PI * 2);
+        mapCtx.fill();
+      }
+    });
+  }
+
+  function mapJump(e: PointerEvent) {
+    const proj = (drawMap as any)._proj;
+    if (!proj) return;
+    const r = map.getBoundingClientRect();
+    const mx = ((e.clientX - r.left) / r.width) * map.width;
+    const my = ((e.clientY - r.top) / r.height) * map.height;
+    const wx = (mx - proj.ox) / proj.s;
+    const wy = (my - proj.oy) / proj.s;
+    panX = viewport.clientWidth / 2 - wx * zoom;
+    panY = viewport.clientHeight / 2 - wy * zoom;
+    applyTransform();
+  }
+  map.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    mapJump(e);
+    try {
+      map.setPointerCapture(e.pointerId);
+    } catch {
+      /* capture is a nicety; jumping already happened */
+    }
+  });
+  map.addEventListener('pointermove', (e) => {
+    if (e.buttons) mapJump(e);
+  });
 
   // ---------- images ----------
   const MAX_BYTES = 15 * 1024 * 1024;
@@ -1030,44 +1380,93 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
     );
   }
 
+  /** Load a URL fully before showing it, so swapping src never flickers. */
+  function preload(url: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
   async function addImage(file: File, at: { x: number; y: number }) {
     if (file.size > MAX_BYTES) {
       showHint(`${file.name} is over 15MB. Try a smaller version.`);
       return;
     }
 
-    // Placeholder card with a shimmer, so the drop feels immediate.
-    const holder = document.createElement('div');
-    holder.className = `bd-item bd-item--photo bd-item--pending${reduceMotion ? '' : ' bd-item--entering'}`;
-    holder.style.cssText = `--x:${at.x}px; --y:${at.y}px; --rot:0deg; --scale:1; z-index:${++topZ}`;
-    holder.innerHTML = '<figure class="bd-photo"><div class="bd-shimmer"></div></figure>';
-    world.appendChild(holder);
-    document.querySelector('[data-empty]')?.remove();
+    // Render from a local object URL straight away. The card is on the board
+    // at its drop point and angle before a single byte has been uploaded.
+    const localUrl = URL.createObjectURL(file);
+    const rotation = Number((Math.random() * 7 - 3.5).toFixed(2));
+    const el = renderItem(
+      { kind: 'photo', x: at.x, y: at.y, rotation, scale: 1, z: ++topZ, url: localUrl, caption: '' },
+      true
+    );
+    el.classList.add('is-uploading');
+    const ring = document.createElement('div');
+    ring.className = 'bd-progress';
+    el.querySelector('.bd-photo')?.appendChild(ring);
 
-    try {
-      const blob = await prepare(file);
-      const name = file.name.replace(/\.[^.]+$/, '') || 'image';
-      const result = await upload(`boards/${slug}/${name}.jpg`, blob, {
-        access: 'public',
-        handleUploadUrl: '/api/board/upload',
-        clientPayload: slug,
-      });
-      const item = await createItem({
-        kind: 'photo',
-        x: at.x,
-        y: at.y,
-        rotation: Number((Math.random() * 7 - 3.5).toFixed(2)),
-        scale: 1,
-        url: result.url,
-        author: 'client',
-      });
-      holder.remove();
-      renderItem(item);
-    } catch (err) {
-      holder.remove();
-      console.error('[board] upload failed:', err);
-      showHint('That image could not be uploaded.');
-    }
+    const finish = () => {
+      el.classList.remove('is-uploading');
+      ring.remove();
+    };
+
+    const attempt = async (): Promise<void> => {
+      el.classList.remove('is-failed');
+      el.querySelector('.bd-retry')?.remove();
+      try {
+        const blob = await prepare(file);
+        const name = file.name.replace(/\.[^.]+$/, '') || 'image';
+        const result = await upload(`boards/${slug}/${name}.jpg`, blob, {
+          access: 'public',
+          handleUploadUrl: '/api/board/upload',
+          clientPayload: slug,
+        });
+
+        // Only swap once the remote image is decoded, so there is no flash.
+        await preload(result.url);
+        const img = el.querySelector('img')!;
+        img.src = result.url;
+        URL.revokeObjectURL(localUrl);
+
+        await persist(el, {
+          kind: 'photo',
+          x: Number(el.dataset.x),
+          y: Number(el.dataset.y),
+          rotation: Number(el.dataset.rot),
+          scale: 1,
+          url: result.url,
+          caption: el.querySelector<HTMLElement>('[data-caption]')?.textContent ?? '',
+          author: 'client',
+        });
+        finish();
+      } catch (err) {
+        console.error('[board] upload failed:', err);
+        // Keep the card. Losing a client's image silently would be worse
+        // than showing them it needs another go.
+        finish();
+        el.classList.add('is-failed');
+        if (!el.querySelector('.bd-retry')) {
+          const retry = document.createElement('button');
+          retry.type = 'button';
+          retry.className = 'bd-retry';
+          retry.textContent = 'Upload failed, retry';
+          retry.addEventListener('pointerdown', (e) => e.stopPropagation());
+          retry.addEventListener('click', (e) => {
+            e.stopPropagation();
+            el.classList.add('is-uploading');
+            el.querySelector('.bd-photo')?.appendChild(ring);
+            attempt();
+          });
+          el.querySelector('.bd-photo')?.appendChild(retry);
+        }
+      }
+    };
+
+    attempt();
   }
 
   function addFiles(files: FileList | File[], at: { x: number; y: number }) {
@@ -1106,27 +1505,23 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
     fileInput.value = '';
   });
 
+
   // ---------- notes ----------
   let noteColour = Math.floor(Math.random() * NOTE_COLOURS.length);
-  document.querySelector('[data-add-note]')?.addEventListener('click', async () => {
+  document.querySelector('[data-add-note]')?.addEventListener('click', () => {
     const colour = NOTE_COLOURS[noteColour++ % NOTE_COLOURS.length];
     const at = toWorld(window.innerWidth / 2, window.innerHeight / 2 + 30);
-    try {
-      const item = await createItem({
-        kind: 'note',
-        x: at.x + (Math.random() * 80 - 40),
-        y: at.y + (Math.random() * 60 - 30),
-        rotation: Number((Math.random() * 7 - 3.5).toFixed(2)),
-        scale: 1,
-        colour,
-        caption: '',
-        author: 'client',
-      });
-      const el = renderItem(item);
-      el.querySelector<HTMLElement>('[data-caption]')?.click();
-    } catch {
-      showHint('Could not add that note.');
-    }
+    const x = at.x + (Math.random() * 80 - 40);
+    const y = at.y + (Math.random() * 60 - 30);
+    const rotation = Number((Math.random() * 7 - 3.5).toFixed(2));
+
+    // Appears and takes the caret immediately; the row is written behind it.
+    const el = renderItem({ kind: 'note', x, y, rotation, scale: 1, z: ++topZ, colour, caption: '' }, true);
+    focusCaption(el);
+
+    persist(el, { kind: 'note', x, y, rotation, scale: 1, colour, caption: '', author: 'client' }).catch(
+      () => showHint('That note could not be saved.')
+    );
   });
 
   // ---------- portfolio drawer ----------
@@ -1161,21 +1556,21 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
   });
 
   /** Place a studio frame on the board at a world position. */
-  async function dropPortfolio(src: string, at: { x: number; y: number }) {
-    try {
-      const item = await createItem({
-        kind: 'photo',
-        x: at.x,
-        y: at.y,
-        rotation: Number((Math.random() * 7 - 3.5).toFixed(2)),
-        scale: 1,
-        url: src,
-        author: 'studio',
-      });
-      renderItem(item);
-    } catch {
-      showHint('Could not add that frame.');
-    }
+  function dropPortfolio(src: string, at: { x: number; y: number }) {
+    const rotation = Number((Math.random() * 7 - 3.5).toFixed(2));
+    const el = renderItem(
+      { kind: 'photo', x: at.x, y: at.y, rotation, scale: 1, z: ++topZ, url: src, caption: '' },
+      true
+    );
+    persist(el, {
+      kind: 'photo',
+      x: at.x,
+      y: at.y,
+      rotation,
+      scale: 1,
+      url: src,
+      author: 'studio',
+    }).catch(() => showHint('Could not add that frame.'));
   }
 
   // Pointer based rather than HTML5 drag, so the same gesture works with a
@@ -1223,6 +1618,14 @@ const PORTFOLIO_FLAT = PORTFOLIO.flatMap((c) => c.srcs.map((src) => ({ src, cate
       thumb.addEventListener('pointerup', onUp);
     });
   });
+
+  // On open, walk the camera to whatever is on the board rather than
+  // dropping the viewer into empty space.
+  mapReady = true;
+  drawMap();
+  if (world.children.length > 0) {
+    requestAnimationFrame(() => fitToContent(900));
+  }
 
   // ---------- share ----------
   document.querySelector('[data-share]')?.addEventListener('click', async () => {
