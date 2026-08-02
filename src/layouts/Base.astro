@@ -1,9 +1,12 @@
 ---
 import '../styles/global.css';
+import { ogImageFor, mimeFor, OG_WIDTH, OG_HEIGHT } from '../lib/og';
 
 interface Props {
   title?: string;
   description?: string;
+  /** Overrides the per-path image from lib/og. Must be 1200x630, since the
+   *  og:image:width/height below are declared as such. Rarely needed. */
   ogImage?: string;
   /** Private pages pass "noindex, nofollow". */
   robots?: string;
@@ -12,7 +15,7 @@ interface Props {
 const {
   title = 'Photography Studio Leicester | CHACE STUDIOS',
   description = 'CHACE STUDIOS is a photography & media studio in Leicester: portraits, weddings, events, video and podcast production under one roof.',
-  ogImage = '/assets/img/portfolio/portraits/portraits-03.jpg',
+  ogImage,
   robots = 'index, follow',
 } = Astro.props;
 
@@ -20,7 +23,10 @@ const {
 // a page never competes with chace.studio in search results.
 const siteBase = (import.meta.env.PUBLIC_SITE_URL ?? Astro.url.origin).replace(/\/$/, '');
 const canonical = new URL(Astro.url.pathname.replace(/\/$/, '') || '/', siteBase).href;
-const ogImageUrl = new URL(ogImage, siteBase);
+
+// Scrapers do not resolve relative paths, so the share image is always absolute.
+const ogPath = ogImage ?? ogImageFor(Astro.url.pathname);
+const ogImageUrl = new URL(ogPath, siteBase).href;
 ---
 
 <!doctype html>
@@ -31,13 +37,33 @@ const ogImageUrl = new URL(ogImage, siteBase);
     <meta name="description" content={description} />
     <meta name="robots" content={robots} />
     <link rel="canonical" href={canonical} />
+
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CHACE STUDIOS" />
+    <meta property="og:locale" content="en_GB" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content={ogImageUrl} />
     <meta property="og:url" content={canonical} />
+    <!-- Width and height let WhatsApp and iMessage lay the card out before the
+         image downloads, which is what gets a full-bleed preview instead of a
+         thumbnail beside the text. -->
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:secure_url" content={ogImageUrl} />
+    <meta property="og:image:type" content={mimeFor(ogPath)} />
+    <meta property="og:image:width" content={OG_WIDTH} />
+    <meta property="og:image:height" content={OG_HEIGHT} />
+    <meta property="og:image:alt" content={title} />
+
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0a0a0a" />
+
     <title>{title}</title>
   </head>
   <body>
