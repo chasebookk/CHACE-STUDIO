@@ -107,3 +107,50 @@ CREATE TABLE IF NOT EXISTS board_items (
 );
 
 CREATE INDEX IF NOT EXISTS board_items_board_idx ON board_items (board_id);
+
+-- ---- Youth Training Programme, parental consent ----
+-- Both students are minors, so this doubles as the safeguarding record.
+-- Treat as append-only: never delete a row, never rewrite a signature.
+-- Each optional consent is its own column so a parent can agree to one and
+-- decline another, and so "who has consented to travel" is a simple query.
+CREATE TABLE IF NOT EXISTS training_consents (
+  id SERIAL PRIMARY KEY,
+
+  student_name TEXT NOT NULL,
+  student_dob DATE NOT NULL,
+  student_school TEXT,
+  medical_notes TEXT,
+
+  parent_name TEXT NOT NULL,
+  parent_relationship TEXT NOT NULL,
+  parent_phone TEXT NOT NULL,
+  parent_email TEXT NOT NULL,
+  parent_address TEXT NOT NULL,
+
+  emergency_name TEXT NOT NULL,
+  emergency_relationship TEXT NOT NULL,
+  emergency_phone TEXT NOT NULL,
+
+  travel_arrangement TEXT NOT NULL,
+  travel_other TEXT,
+
+  -- Required declarations. The API refuses the submission unless all are true.
+  consent_guardian BOOLEAN NOT NULL DEFAULT false,
+  consent_participation BOOLEAN NOT NULL DEFAULT false,
+  consent_unpaid BOOLEAN NOT NULL DEFAULT false,
+  consent_equipment BOOLEAN NOT NULL DEFAULT false,
+  consent_details_accurate BOOLEAN NOT NULL DEFAULT false,
+  consent_withdraw BOOLEAN NOT NULL DEFAULT false,
+
+  -- Optional, independently recorded.
+  consent_travel BOOLEAN NOT NULL DEFAULT false,
+  consent_filming BOOLEAN NOT NULL DEFAULT false,
+  consent_sharing BOOLEAN NOT NULL DEFAULT false,
+
+  signature_name TEXT NOT NULL,
+  signed_date DATE NOT NULL,
+  ip TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS training_consents_created_idx ON training_consents (created_at DESC);

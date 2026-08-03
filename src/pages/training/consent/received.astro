@@ -1,0 +1,228 @@
+---
+// Shown after a consent form is submitted. Reached by redirect, so it must
+// stand on its own if a parent bookmarks or reloads it.
+export const prerender = false;
+
+import Base from '../../../layouts/Base.astro';
+import Header from '../../../components/Header.astro';
+import Footer from '../../../components/Footer.astro';
+import { PROGRAMME } from '../../../lib/training';
+import { MAPS_URL } from '../../../data/portfolio';
+
+const firstName = (Astro.url.searchParams.get('name') ?? '').trim().slice(0, 40);
+// The API appends mail=0 when the parent's copy could not be sent, so the
+// page never promises an email that is not coming.
+const emailFailed = Astro.url.searchParams.get('mail') === '0';
+---
+
+<Base
+  title="Consent received | CHACE STUDIOS Youth Training Programme"
+  description="Your consent form has been received."
+  robots="noindex, nofollow"
+>
+  <Header />
+
+  <main class="tk">
+    <section class="tk-hero">
+      <p class="eyebrow tk-hero__eyebrow">Youth Training Programme, {PROGRAMME.season}</p>
+      <h1 class="display tk-hero__title">
+        {firstName ? `Thank you, ${firstName}.` : 'Thank you.'}
+      </h1>
+      <p class="tk-hero__lede">
+        Your consent form has been received and recorded. Nothing else is needed from you
+        right now.
+      </p>
+    </section>
+
+    <section class="tk-body sec-light">
+      <div class="tk-inner">
+        {emailFailed ? (
+          <div class="tk-warn">
+            <strong>One thing.</strong> Your form is saved safely, but we could not send your
+            emailed copy just now. Email
+            <a href={`mailto:${PROGRAMME.email}`}>{PROGRAMME.email}</a> and we will send it
+            straight over.
+          </div>
+        ) : (
+          <div class="tk-ok">
+            A copy of everything you signed is on its way to your inbox. Keep it for your
+            records. If it has not arrived in a few minutes, check your spam folder.
+          </div>
+        )}
+
+        <h2 class="tk-h2">What happens next</h2>
+        <ol class="tk-steps">
+          <li>
+            <span class="tk-step__no">1</span>
+            <span class="tk-step__text">
+              We confirm your child's place and send the session timetable for all six weeks.
+            </span>
+          </li>
+          <li>
+            <span class="tk-step__no">2</span>
+            <span class="tk-step__text">
+              You get a reminder before the first session with what to bring. No equipment is
+              needed, everything is provided.
+            </span>
+          </li>
+          <li>
+            <span class="tk-step__no">3</span>
+            <span class="tk-step__text">
+              If a trip beyond 5 miles is ever planned, you are told the destination, timings
+              and arrangements in advance, whatever you ticked today.
+            </span>
+          </li>
+        </ol>
+
+        <h2 class="tk-h2">Where we are</h2>
+        <p class="tk-addr">
+          CHACE STUDIOS<br />
+          {PROGRAMME.address}
+        </p>
+        <a class="btn btn--ink tk-btn" href={MAPS_URL} target="_blank" rel="noopener">
+          Get directions
+        </a>
+
+        <h2 class="tk-h2">Any questions</h2>
+        <p class="tk-contact">
+          Email <a href={`mailto:${PROGRAMME.email}`}>{PROGRAMME.email}</a> and we will get
+          back to you. You can withdraw or change any consent at any time, for any reason,
+          just by asking.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  .tk-hero {
+    background: var(--bg);
+    padding: 48px max(var(--pad), var(--safe-l)) 56px max(var(--pad), var(--safe-r));
+    border-bottom: 1px solid var(--line);
+  }
+  .tk-hero__eyebrow {
+    margin: 0 0 14px;
+  }
+  .tk-hero__title {
+    font-size: clamp(32px, 9vw, 56px);
+    line-height: 1.02;
+    letter-spacing: -1.8px;
+    margin: 0 0 16px;
+  }
+  .tk-hero__lede {
+    margin: 0;
+    max-width: 50ch;
+    font-size: 15px;
+    line-height: 25px;
+    color: var(--text-70);
+  }
+
+  .tk-body {
+    padding-top: 36px;
+    padding-bottom: 64px;
+  }
+  .tk-inner {
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  .tk-ok,
+  .tk-warn {
+    padding: 16px 18px;
+    border-radius: 12px;
+    font-size: 14.5px;
+    line-height: 22px;
+    margin-bottom: 36px;
+  }
+  .tk-ok {
+    background: rgba(255, 166, 0, 0.1);
+    border-left: 3px solid var(--orange);
+    color: var(--ink);
+  }
+  .tk-warn {
+    background: rgba(255, 25, 9, 0.07);
+    border-left: 3px solid var(--red);
+    color: #8a0f04;
+  }
+  .tk-ok a,
+  .tk-warn a {
+    color: inherit;
+  }
+
+  .tk-h2 {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 17px;
+    letter-spacing: -0.3px;
+    color: var(--ink);
+    margin: 0 0 16px;
+  }
+
+  .tk-steps {
+    list-style: none;
+    margin: 0 0 36px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .tk-steps li {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .tk-step__no {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: var(--grad-accent);
+    color: var(--white);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .tk-step__text {
+    font-size: 14.5px;
+    line-height: 22px;
+    color: var(--ink);
+  }
+
+  .tk-addr {
+    margin: 0 0 16px;
+    font-size: 15px;
+    line-height: 24px;
+    color: var(--ink);
+  }
+  .tk-btn {
+    display: inline-flex;
+    margin-bottom: 36px;
+  }
+
+  .tk-contact {
+    margin: 0;
+    font-size: 14.5px;
+    line-height: 23px;
+    color: var(--ink-60);
+  }
+  .tk-contact a {
+    color: var(--ink);
+    text-decoration: underline;
+  }
+
+  @media (min-width: 720px) {
+    .tk-hero {
+      padding-top: 72px;
+      padding-bottom: 80px;
+    }
+    .tk-body {
+      padding-top: 56px;
+      padding-bottom: 88px;
+    }
+  }
+</style>

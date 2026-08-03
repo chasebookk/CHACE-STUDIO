@@ -4,6 +4,7 @@ import { query, type BookingRow } from '../lib/db';
 import { checkAdminAuth, unauthorized } from '../lib/auth';
 import { getPackage, getStudio, PACKAGES as BOOKABLE } from '../config/booking';
 import { getCard } from '../data/packages';
+import { travelLabel, REQUIRED_CONSENTS, type ConsentRow } from '../lib/training';
 
 const siteBase = (import.meta.env.PUBLIC_SITE_URL ?? Astro.url.origin).replace(/\/$/, '');
 const shareLinks = BOOKABLE.map((p) => ({
@@ -33,6 +34,18 @@ const blocked = (
     `SELECT * FROM blocked_slots WHERE date >= CURRENT_DATE ORDER BY date ASC LIMIT 100`
   )
 ).rows;
+
+// Safeguarding records for the youth training programme. Newest first.
+const consents = (
+  await query<ConsentRow>(
+    `SELECT * FROM training_consents ORDER BY created_at DESC LIMIT 200`
+  )
+).rows;
+
+// DATE columns come back as 'YYYY-MM-DD' strings (see lib/db), but TIMESTAMPTZ
+// still arrives as a Date, so it needs formatting rather than slicing.
+const ts = (v: string | Date) =>
+  new Date(v).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
 const fmt = (p: number) => `£${(p / 100).toFixed(2)}`;
 const d = (s: string) => String(s).slice(0, 10);
@@ -245,6 +258,71 @@ const mins = (b: BookingRow) => {
           </tbody>
         </table>
         </div>
+      )}
+    </section>
+
+    <section class="ad__section">
+      <h2 class="display ad__h2">Training consents</h2>
+      {consents.length === 0 ? (
+        <p class="ad__empty">No consent forms yet. The form is at <a class="ad__link-inline" href="/training/consent">/training/consent</a>.</p>
+      ) : (
+        <>
+          <p class="ad__consent-summary">
+            {consents.length} {consents.length === 1 ? 'record' : 'records'} ·
+            {' '}{consents.filter((c) => c.consent_travel).length} consented to travel beyond 5 miles ·
+            {' '}{consents.filter((c) => c.consent_sharing).length} consented to public sharing
+          </p>
+          <div class="ad__consents">
+            {consents.map((c) => (
+              <details class="ad__consent">
+                <summary class="ad__consent-head">
+                  <span class="ad__consent-name">{c.student_name}</span>
+                  <span class="ad__consent-tags">
+                    <span class:list={['ad__tag', c.consent_travel ? 'ad__tag--yes' : 'ad__tag--no']}>
+                      Travel {c.consent_travel ? 'yes' : 'no'}
+                    </span>
+                    <span class:list={['ad__tag', c.consent_filming ? 'ad__tag--yes' : 'ad__tag--no']}>
+                      Filming {c.consent_filming ? 'yes' : 'no'}
+                    </span>
+                    <span class:list={['ad__tag', c.consent_sharing ? 'ad__tag--yes' : 'ad__tag--no']}>
+                      Sharing {c.consent_sharing ? 'yes' : 'no'}
+                    </span>
+                  </span>
+                  <span class="ad__mono ad__consent-date">{ts(c.created_at)}</span>
+                </summary>
+
+                <div class="ad__consent-body">
+                  <dl class="ad__dl">
+                    <dt>Date of birth</dt><dd>{d(c.student_dob)}</dd>
+                    <dt>School or college</dt><dd>{c.student_school || 'Not given'}</dd>
+                    <dt>Medical / needs</dt><dd class="ad__pre">{c.medical_notes || 'None declared'}</dd>
+                    <dt>Parent or guardian</dt><dd>{c.parent_name} ({c.parent_relationship})</dd>
+                    <dt>Mobile</dt><dd><a class="ad__link-inline" href={`tel:${c.parent_phone}`}>{c.parent_phone}</a></dd>
+                    <dt>Email</dt><dd><a class="ad__link-inline" href={`mailto:${c.parent_email}`}>{c.parent_email}</a></dd>
+                    <dt>Home address</dt><dd class="ad__pre">{c.parent_address}</dd>
+                    <dt>Emergency contact</dt>
+                    <dd>
+                      {c.emergency_name} ({c.emergency_relationship})<br />
+                      <a class="ad__link-inline" href={`tel:${c.emergency_phone}`}>{c.emergency_phone}</a>
+                    </dd>
+                    <dt>Getting to the studio</dt><dd>{travelLabel(c)}</dd>
+                    <dt>Signed</dt><dd>{c.signature_name} on {d(c.signed_date)}</dd>
+                    <dt>Submitted from</dt><dd class="ad__mono">{c.ip ?? 'unknown'}</dd>
+                  </dl>
+
+                  <div class="ad__consent-decls">
+                    <span class="ad__consent-decls-head">
+                      All {REQUIRED_CONSENTS.length} required declarations ticked
+                    </span>
+                    <span class="ad__sub">
+                      Guardian · Participation · Free and unpaid · Equipment risk · Details accurate · Right to withdraw
+                    </span>
+                  </div>
+                </div>
+              </details>
+            ))}
+          </div>
+        </>
       )}
     </section>
   </main>
@@ -524,6 +602,130 @@ const mins = (b: BookingRow) => {
       color-scheme: dark;
       font-family: var(--font-body);
       font-size: 16px;
+    }
+
+    .ad__consent-summary {
+      margin: -6px 0 16px;
+      color: var(--text-50);
+      font-size: 13px;
+    }
+    .ad__consents {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ad__consent {
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      background: var(--card);
+    }
+    .ad__consent-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      min-height: var(--tap);
+      padding: 10px 14px;
+      cursor: pointer;
+      list-style: none;
+    }
+    .ad__consent-head::-webkit-details-marker {
+      display: none;
+    }
+    .ad__consent-head::before {
+      content: '▸';
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .ad__consent[open] .ad__consent-head::before {
+      content: '▾';
+    }
+    .ad__consent-name {
+      font-weight: 700;
+      font-size: 14px;
+      margin-right: auto;
+    }
+    .ad__consent-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .ad__tag {
+      padding: 3px 9px;
+      border-radius: 9999px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+    }
+    .ad__tag--yes {
+      background: rgba(255, 166, 0, 0.16);
+      color: var(--orange);
+    }
+    .ad__tag--no {
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text-50);
+    }
+    .ad__consent-date {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .ad__consent-body {
+      padding: 4px 14px 16px;
+      border-top: 1px solid var(--line);
+    }
+    .ad__dl {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2px 16px;
+      margin: 14px 0 0;
+    }
+    .ad__dl dt {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+    .ad__dl dd {
+      margin: 0;
+      font-size: 13.5px;
+      line-height: 20px;
+      color: var(--white);
+      overflow-wrap: anywhere;
+    }
+    .ad__pre {
+      white-space: pre-wrap;
+    }
+    .ad__link-inline {
+      color: var(--orange);
+    }
+    .ad__consent-decls {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: rgba(255, 166, 0, 0.08);
+    }
+    .ad__consent-decls-head {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--orange);
+    }
+
+    @media (min-width: 700px) {
+      .ad__dl {
+        grid-template-columns: 190px 1fr;
+      }
+      .ad__dl dt {
+        margin-top: 0;
+      }
+      .ad__dl dd {
+        margin-bottom: 8px;
+      }
     }
 
     @media (max-width: 720px) {

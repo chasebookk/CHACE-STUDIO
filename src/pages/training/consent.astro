@@ -1,0 +1,675 @@
+---
+// Parental consent for the Youth Training Programme. Both students are
+// minors, so this page is also the safeguarding record. Never indexed.
+export const prerender = false;
+
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import {
+  PROGRAMME,
+  CURRICULUM,
+  REQUIRED_CONSENTS,
+  OPTIONAL_CONSENTS,
+  TRAVEL_OPTIONS,
+} from '../../lib/training';
+
+const today = new Date();
+const signedDisplay = today.toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
+
+const glance = [
+  'Six weeks, three sessions per week, starting the first week of August 2026',
+  `CHACE STUDIOS, ${PROGRAMME.address}`,
+  '<strong>Completely free.</strong> No fees, no charges',
+  '<strong>This is training, not employment.</strong> No wages or salary are paid, and your child is not required to work',
+  'Any travel or location costs during the programme are covered by CHACE STUDIOS',
+];
+---
+
+<Base
+  title="Parental Consent | CHACE STUDIOS Youth Training Programme"
+  description="Parental consent and registration for the CHACE STUDIOS Youth Training Programme, Summer 2026."
+  robots="noindex, nofollow"
+>
+  <Header />
+
+  <main class="tc">
+    <!-- Dark cinematic header -->
+    <section class="tc-hero">
+      <p class="eyebrow tc-hero__eyebrow">Youth Training Programme, {PROGRAMME.season}</p>
+      <h1 class="display tc-hero__title">Parental Consent<br />and Registration</h1>
+      <p class="tc-hero__lede">
+        A free six week training programme in photography and cinematography for two young
+        people, run at CHACE STUDIOS in Leicester. This form records your consent as a parent
+        or guardian, and confirms the details we need to run the programme safely.
+      </p>
+    </section>
+
+    <!-- White body -->
+    <section class="tc-body sec-light">
+      <div class="tc-inner">
+        <div class="tc-glance">
+          <h2 class="tc-h2">At a glance</h2>
+          <ul class="tc-glance__list">
+            {glance.map((g) => <li set:html={g} />)}
+          </ul>
+        </div>
+
+        <div class="tc-block">
+          <h2 class="tc-h2">What your child will learn</h2>
+          <ol class="tc-weeks">
+            {CURRICULUM.map((w) => (
+              <li class="tc-week">
+                <span class="tc-week__no">Week {w.week}</span>
+                <span class="tc-week__title">{w.title}</span>
+                <span class="tc-week__detail">{w.detail}</span>
+              </li>
+            ))}
+          </ol>
+          <p class="tc-note">
+            Sessions are practical. Your child will be handling professional cameras and
+            lighting from the first week, with supervision throughout.
+          </p>
+        </div>
+
+        <form
+          class="tc-form"
+          method="post"
+          action="/api/training-consent"
+          novalidate={false}
+          data-consent-form
+        >
+          <fieldset class="tc-set">
+            <legend class="tc-legend">Student</legend>
+
+            <label class="tc-field">
+              <span class="tc-label">Full name of student <span aria-hidden="true">*</span></span>
+              <input class="tc-input" type="text" name="student_name" autocomplete="name" required />
+            </label>
+
+            <label class="tc-field">
+              <span class="tc-label">Date of birth <span aria-hidden="true">*</span></span>
+              <input class="tc-input" type="date" name="student_dob" max={today.toISOString().slice(0, 10)} required />
+            </label>
+
+            <label class="tc-field">
+              <span class="tc-label">School or college</span>
+              <input class="tc-input" type="text" name="student_school" />
+            </label>
+
+            <label class="tc-field">
+              <span class="tc-label">
+                Any medical conditions, allergies or additional needs we should know about
+              </span>
+              <textarea class="tc-input tc-textarea" name="medical_notes" rows="4"
+                placeholder="Asthma, allergies, medication, anything that affects how we run a session. If there is nothing, write None."></textarea>
+              <span class="tc-hint">Optional, but please be honest. It only reaches CHACE STUDIOS.</span>
+            </label>
+          </fieldset>
+
+          <fieldset class="tc-set">
+            <legend class="tc-legend">Parent or guardian</legend>
+
+            <label class="tc-field">
+              <span class="tc-label">Full name <span aria-hidden="true">*</span></span>
+              <input class="tc-input" type="text" name="parent_name" autocomplete="name" required />
+            </label>
+
+            <label class="tc-field">
+              <span class="tc-label">Relationship to student <span aria-hidden="true">*</span></span>
+              <input class="tc-input" type="text" name="parent_relationship" placeholder="Mother, father, guardian" required />
+            </label>
+
+            <label class="tc-field">
+              <span class="tc-label">Mobile number <span aria-hidden="true">*</span></span>
+              <input class="tc-input" type="tel" name="parent_phone" autocomplete="tel" inputmode="tel" required />
+            </label>
+
+            <label class="tc-field">
+              <span class="tc-label">Email address <span aria-hidden="true">*</span></span>
+              <input class="tc-input" type="email" name="parent_email" autocomplete="email" inputmode="email" required />
+              <span class="tc-hint">Your copy of this form is sent here.</span>
+            </label>
+
+            <label class="tc-field">
+              <span class="tc-label">Home address <span aria-hidden="true">*</span></span>
+              <textarea class="tc-input tc-textarea" name="parent_address" rows="3" autocomplete="street-address" required></textarea>
+            </label>
+          </fieldset>
+
+          <fieldset class="tc-set">
+            <legend class="tc-legend">Emergency contact</legend>
+            <p class="tc-setnote">Someone other than the parent or guardian above.</p>
+
+            <label class="tc-field">
+              <span class="tc-label">Full name <span aria-hidden="true">*</span></span>
+              <input class="tc-input" type="text" name="emergency_name" required />
+            </label>
+
+            <label class="tc-field">
+              <span class="tc-label">Relationship <span aria-hidden="true">*</span></span>
+              <input class="tc-input" type="text" name="emergency_relationship" required />
+            </label>
+
+            <label class="tc-field">
+              <span class="tc-label">Mobile number <span aria-hidden="true">*</span></span>
+              <input class="tc-input" type="tel" name="emergency_phone" inputmode="tel" required />
+            </label>
+          </fieldset>
+
+          <fieldset class="tc-set">
+            <legend class="tc-legend">Getting to and from the studio</legend>
+
+            <div class="tc-radios">
+              {TRAVEL_OPTIONS.map((o) => (
+                <label class="tc-radio">
+                  <input type="radio" name="travel_arrangement" value={o.value} required />
+                  <span>{o.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <label class="tc-field tc-field--other" data-travel-other hidden>
+              <span class="tc-label">Please describe the arrangement</span>
+              <input class="tc-input" type="text" name="travel_other" />
+            </label>
+          </fieldset>
+
+          <fieldset class="tc-set tc-set--consent">
+            <legend class="tc-legend">Your consent</legend>
+            <p class="tc-setnote">All six must be ticked before the form can be submitted.</p>
+
+            {REQUIRED_CONSENTS.map((d) => (
+              <label class="tc-check tc-check--required">
+                <input type="checkbox" name={d.id} required data-required-consent />
+                <span class="tc-check__text" set:html={d.label} />
+              </label>
+            ))}
+          </fieldset>
+
+          <fieldset class="tc-set">
+            <legend class="tc-legend">Optional permissions</legend>
+            <p class="tc-setnote">
+              These are genuinely optional and recorded separately. You may agree to one and
+              decline another, and the programme runs either way.
+            </p>
+
+            {OPTIONAL_CONSENTS.map((d) => (
+              <label class="tc-check">
+                <input type="checkbox" name={d.id} />
+                <span class="tc-check__text">
+                  <span set:html={d.label} />
+                  {d.note && <span class="tc-check__note">{d.note}</span>}
+                </span>
+              </label>
+            ))}
+          </fieldset>
+
+          <fieldset class="tc-set">
+            <legend class="tc-legend">Declaration and signature</legend>
+
+            <label class="tc-field">
+              <span class="tc-label">Type your full name <span aria-hidden="true">*</span></span>
+              <input class="tc-input tc-signature" type="text" name="signature_name" autocomplete="name" required />
+            </label>
+
+            <label class="tc-field">
+              <span class="tc-label">Date</span>
+              <input class="tc-input" type="text" value={signedDisplay} readonly tabindex="-1" aria-readonly="true" />
+            </label>
+
+            <p class="tc-smallprint">
+              By typing your name you are signing this form electronically. A copy will be
+              emailed to you.
+            </p>
+          </fieldset>
+
+          <p class="tc-error" data-error role="alert" hidden></p>
+
+          <button type="submit" class="btn btn--fill tc-submit" data-submit>
+            Submit consent form
+          </button>
+
+          <p class="tc-footnote">
+            Questions before you sign? Email
+            <a href={`mailto:${PROGRAMME.email}`}>{PROGRAMME.email}</a>.
+          </p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  /* Mobile first: these are the phone styles, widened at 720px and up. */
+  .tc {
+    display: block;
+  }
+
+  /* ---- Dark header ---- */
+  .tc-hero {
+    background: var(--bg);
+    padding: 40px max(var(--pad), var(--safe-l)) 48px max(var(--pad), var(--safe-r));
+    border-bottom: 1px solid var(--line);
+  }
+  .tc-hero__eyebrow {
+    margin: 0 0 14px;
+  }
+  .tc-hero__title {
+    font-size: clamp(30px, 8.5vw, 52px);
+    line-height: 1.02;
+    letter-spacing: -1.6px;
+    margin: 0 0 18px;
+  }
+  .tc-hero__lede {
+    margin: 0;
+    max-width: 54ch;
+    font-size: 15px;
+    line-height: 25px;
+    color: var(--text-70);
+  }
+
+  /* ---- White body ---- */
+  .tc-body {
+    padding-top: 36px;
+    padding-bottom: 56px;
+  }
+  .tc-inner {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .tc-h2 {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 17px;
+    letter-spacing: -0.3px;
+    color: var(--ink);
+    margin: 0 0 14px;
+  }
+
+  .tc-glance {
+    padding: 20px;
+    border-radius: 14px;
+    background: rgba(255, 166, 0, 0.09);
+    border-left: 3px solid var(--orange);
+    margin-bottom: 36px;
+  }
+  .tc-glance__list {
+    margin: 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    font-size: 14.5px;
+    line-height: 22px;
+    color: var(--ink);
+  }
+
+  .tc-block {
+    margin-bottom: 36px;
+  }
+  .tc-weeks {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .tc-week {
+    display: grid;
+    gap: 3px;
+    padding: 14px 16px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 12px;
+  }
+  .tc-week__no {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--orange);
+  }
+  .tc-week__title {
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .tc-week__detail {
+    font-size: 13.5px;
+    line-height: 20px;
+    color: var(--ink-60);
+  }
+  .tc-note {
+    margin: 16px 0 0;
+    font-size: 14px;
+    line-height: 22px;
+    color: var(--ink-60);
+  }
+
+  /* ---- Form ---- */
+  .tc-form {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .tc-set {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+  .tc-legend {
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    width: 100%;
+    padding-bottom: 10px;
+    margin-bottom: 4px;
+  }
+  .tc-setnote {
+    margin: -6px 0 0;
+    font-size: 13.5px;
+    line-height: 20px;
+    color: var(--ink-60);
+  }
+
+  .tc-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  /* A class selector outranks the UA [hidden] rule, so say it explicitly or
+     the conditional "Other" field stays on screen. */
+  .tc-field[hidden] {
+    display: none;
+  }
+  .tc-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    margin-bottom: 8px;
+  }
+  .tc-label span {
+    color: var(--red);
+  }
+  .tc-hint {
+    margin-top: 7px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--ink-50);
+  }
+
+  .tc-input {
+    width: 100%;
+    min-width: 0;
+    min-height: 52px;
+    padding: 14px 16px;
+    background: var(--white);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    color: var(--ink);
+    font-family: var(--font-body);
+    /* 16px floor: iOS zooms the page on focus below it. */
+    font-size: 16px;
+    line-height: 22px;
+    outline: none;
+    transition: border-color 0.2s ease;
+  }
+  .tc-input:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(255, 166, 0, 0.18);
+  }
+  .tc-input[readonly] {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--ink-60);
+  }
+  .tc-textarea {
+    min-height: 110px;
+    resize: vertical;
+  }
+  .tc-signature {
+    font-size: 19px;
+    letter-spacing: 0.3px;
+  }
+
+  /* Radios and checkboxes: the whole row is the tap target. */
+  .tc-radios {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .tc-radio,
+  .tc-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-height: var(--tap);
+    padding: 12px 14px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .tc-radio:has(input:checked),
+  .tc-check:has(input:checked) {
+    border-color: var(--orange);
+    background: rgba(255, 166, 0, 0.07);
+  }
+  .tc-radio input,
+  .tc-check input {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    accent-color: #ff6a00;
+  }
+  .tc-radio span {
+    font-size: 15px;
+    line-height: 22px;
+    color: var(--ink);
+  }
+  .tc-check {
+    align-items: flex-start;
+  }
+  .tc-check input {
+    margin-top: 1px;
+  }
+  .tc-check__text {
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--ink);
+  }
+  .tc-check__note {
+    display: block;
+    margin-top: 6px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--ink-50);
+  }
+  .tc-set--consent {
+    padding: 18px 16px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.025);
+  }
+  .tc-set--consent .tc-check {
+    background: var(--white);
+  }
+  .tc-set--consent .tc-check:has(input:checked) {
+    background: rgba(255, 166, 0, 0.07);
+  }
+
+  .tc-smallprint {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 19px;
+    color: var(--ink-50);
+  }
+
+  .tc-error {
+    margin: 0;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: rgba(255, 25, 9, 0.08);
+    border-left: 3px solid var(--red);
+    color: #8a0f04;
+    font-size: 14px;
+    line-height: 21px;
+  }
+  .tc-error[hidden] {
+    display: none;
+  }
+
+  .tc-submit {
+    width: 100%;
+    min-height: 56px;
+    border: 0;
+    border-radius: 10px;
+  }
+  .tc-submit[disabled] {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .tc-footnote {
+    margin: 0;
+    text-align: center;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--ink-50);
+  }
+  .tc-footnote a {
+    color: var(--ink);
+    text-decoration: underline;
+  }
+
+  /* ---- Wider screens ---- */
+  @media (min-width: 720px) {
+    .tc-hero {
+      padding-top: 64px;
+      padding-bottom: 72px;
+    }
+    .tc-hero__lede {
+      font-size: 16px;
+      line-height: 27px;
+    }
+    .tc-body {
+      padding-top: 56px;
+      padding-bottom: 88px;
+    }
+    .tc-weeks {
+      gap: 12px;
+    }
+    .tc-week {
+      grid-template-columns: 110px 1fr;
+      grid-template-areas: 'no title' 'no detail';
+      align-items: baseline;
+      column-gap: 16px;
+    }
+    .tc-week__no {
+      grid-area: no;
+    }
+    .tc-week__title {
+      grid-area: title;
+    }
+    .tc-week__detail {
+      grid-area: detail;
+    }
+    .tc-form {
+      gap: 34px;
+    }
+    .tc-set--consent {
+      padding: 24px;
+    }
+    .tc-submit {
+      width: auto;
+      align-self: flex-start;
+      padding-inline: 48px;
+    }
+  }
+</style>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-consent-form]');
+  const errorBox = document.querySelector<HTMLElement>('[data-error]');
+  const submit = document.querySelector<HTMLButtonElement>('[data-submit]');
+  const otherField = document.querySelector<HTMLElement>('[data-travel-other]');
+  const otherInput = otherField?.querySelector<HTMLInputElement>('input');
+
+  // "Other" only asks for detail once it is chosen, and only then is it required.
+  const syncOther = () => {
+    const picked = form?.querySelector<HTMLInputElement>('input[name="travel_arrangement"]:checked');
+    const isOther = picked?.value === 'other';
+    if (otherField) otherField.hidden = !isOther;
+    if (otherInput) otherInput.required = isOther;
+  };
+  form?.querySelectorAll('input[name="travel_arrangement"]').forEach((r) =>
+    r.addEventListener('change', syncOther)
+  );
+  syncOther();
+
+  const showError = (message: string) => {
+    if (!errorBox) return;
+    errorBox.textContent = message;
+    errorBox.hidden = false;
+    errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  form?.addEventListener('submit', async (e) => {
+    if (!form.checkValidity()) {
+      // Let the browser point at the first problem, but say plainly what is
+      // wrong when it is an unticked declaration, which is easy to miss.
+      const missingConsent = form.querySelector<HTMLInputElement>('[data-required-consent]:not(:checked)');
+      if (missingConsent) {
+        e.preventDefault();
+        showError('Every declaration in the "Your consent" section must be ticked before you can submit.');
+        missingConsent.closest('label')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      return; // native validation handles the rest
+    }
+
+    // Enhance the plain POST into a fetch so a server-side error does not
+    // throw away everything the parent has typed.
+    e.preventDefault();
+    errorBox && (errorBox.hidden = true);
+    if (submit) {
+      submit.disabled = true;
+      submit.textContent = 'Sending…';
+    }
+
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { Accept: 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'That did not save. Please try again.');
+      window.location.href = data.next ?? '/training/consent/received';
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'That did not save. Please try again.');
+      if (submit) {
+        submit.disabled = false;
+        submit.textContent = 'Submit consent form';
+      }
+    }
+  });
+</script>
