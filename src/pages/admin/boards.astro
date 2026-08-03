@@ -110,6 +110,9 @@ const when = (iso: string) => {
       margin: 0;
     }
     .ab__back {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--tap);
       font-family: var(--font-mono);
       font-size: 11px;
       letter-spacing: 1.6px;
@@ -144,17 +147,20 @@ const when = (iso: string) => {
       color: var(--muted);
     }
     .ab-field input {
-      height: 40px;
-      padding: 0 12px;
+      min-height: var(--tap);
+      min-width: 0;
+      width: 100%;
+      padding: 10px 12px;
       background: var(--card);
       border: 1px solid var(--line-strong);
       border-radius: 8px;
       color: var(--white);
       font-family: var(--font-body);
-      font-size: 14px;
+      /* 16px floor, or iOS zooms in on focus. */
+      font-size: 16px;
     }
     .ab-create {
-      height: 40px;
+      min-height: var(--tap);
       flex: none;
     }
 
@@ -209,8 +215,9 @@ const when = (iso: string) => {
     .ab-btn {
       display: inline-flex;
       align-items: center;
-      height: 30px;
-      padding: 0 12px;
+      justify-content: center;
+      min-height: var(--tap);
+      padding: 8px 14px;
       border: 1px solid var(--line-strong);
       border-radius: 6px;
       background: none;

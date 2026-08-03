@@ -45,11 +45,12 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
     position: sticky;
     top: 0;
     z-index: 50;
-    height: 72px;
+    min-height: 72px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 var(--pad);
+    padding-left: max(var(--pad), var(--safe-l));
+    padding-right: max(var(--pad), var(--safe-r));
     background: rgba(0, 0, 0, 0.82);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -57,6 +58,9 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
   }
 
   .header__logo {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
     font-family: var(--font-display);
     font-weight: 400;
     font-size: 26px;
@@ -72,6 +76,9 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
   }
 
   .header__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
     font-family: var(--font-body);
     font-weight: 700;
     font-size: 11px;
@@ -86,7 +93,7 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
   }
 
   .header__cta {
-    height: 40px;
+    min-height: var(--tap);
     padding: 0 20px;
     font-size: 11px;
     letter-spacing: 2.2px;
@@ -95,7 +102,10 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
   .header__menu {
     display: none;
     align-items: center;
+    justify-content: flex-end;
     gap: 10px;
+    min-width: var(--tap);
+    min-height: var(--tap);
     background: none;
     border: 0;
     padding: 0;
@@ -129,8 +139,8 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 
   .overlay__close {
     position: absolute;
-    top: 22px;
-    right: var(--pad);
+    top: calc(22px + var(--safe-t));
+    right: max(var(--pad), var(--safe-r));
     width: 44px;
     height: 44px;
     border: 1px solid var(--line-strong);
@@ -149,6 +159,9 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
   }
 
   .overlay__link {
+    display: flex;
+    align-items: center;
+    min-height: var(--tap);
     font-size: 44px;
     line-height: 1;
     letter-spacing: -2.2px;
@@ -169,7 +182,8 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 
   .overlay__foot {
     position: absolute;
-    bottom: 32px;
+    /* Clear of the iPhone home indicator. */
+    bottom: calc(32px + var(--safe-b));
     font-family: var(--font-mono);
     font-size: 11px;
     letter-spacing: 1.5px;
@@ -202,6 +216,26 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
     }
     .header__menu {
       display: inline-flex;
+    }
+  }
+
+  @media (max-width: 430px) {
+    .header {
+      min-height: 64px;
+    }
+    .header__logo {
+      font-size: 22px;
+    }
+    .overlay__nav {
+      gap: 20px;
+    }
+    .overlay__link {
+      font-size: 38px;
+      letter-spacing: -1.6px;
+    }
+    .overlay__foot {
+      font-size: 10px;
+      line-height: 16px;
     }
   }
 </style>

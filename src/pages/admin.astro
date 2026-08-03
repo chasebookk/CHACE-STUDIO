@@ -336,8 +336,11 @@ const mins = (b: BookingRow) => {
       gap: 6px;
     }
     .ad__btn {
-      height: 30px;
-      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: var(--tap);
+      padding: 8px 14px;
       border: 1px solid var(--line-strong);
       border-radius: 6px;
       background: none;
@@ -407,6 +410,10 @@ const mins = (b: BookingRow) => {
       line-height: 17px;
     }
     .ad__link-url {
+      display: flex;
+      align-items: center;
+      min-height: var(--tap);
+      min-width: 0;
       font-family: var(--font-mono);
       font-size: 11px;
       color: var(--muted);
@@ -506,15 +513,28 @@ const mins = (b: BookingRow) => {
       color: var(--muted);
     }
     .ad__blockform input {
-      height: 34px;
-      padding: 0 10px;
+      min-height: var(--tap);
+      padding: 8px 10px;
       background: var(--card);
       border: 1px solid var(--line-strong);
       border-radius: 6px;
       color: var(--white);
       color-scheme: dark;
       font-family: var(--font-body);
-      font-size: 13px;
+      font-size: 16px;
+    }
+
+    @media (max-width: 720px) {
+      .ad__blockform {
+        gap: 10px;
+      }
+      .ad__blockform label {
+        flex: 1 1 140px;
+      }
+      .ad__actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
     }
   </style>
 </Base>

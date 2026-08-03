@@ -41,10 +41,16 @@ const { label, href, id } = Astro.props;
   }
 
   .carousel__label {
-    font-size: 24px;
+    font-size: clamp(20px, 4.5vw, 24px);
     line-height: 30px;
     letter-spacing: -1.2px;
     margin: 0;
+  }
+  .carousel__label--link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--tap);
   }
 
   .carousel__label--link .carousel__label-arrow {

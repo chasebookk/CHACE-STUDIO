@@ -76,12 +76,14 @@ import { ADDRESS, MAPS_URL } from '../data/portfolio';
   }
 
   .studio__addr {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
     font-family: var(--font-mono);
     font-size: 12px;
     letter-spacing: 1.8px;
     color: var(--text-70);
-    margin-bottom: 36px;
+    margin-bottom: 28px;
     transition: color 0.2s ease;
   }
   .studio__addr:hover {

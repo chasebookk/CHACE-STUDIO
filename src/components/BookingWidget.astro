@@ -199,12 +199,16 @@ const bookingData = offered.map((p) => ({
 
   .pk-form {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* minmax(0, 1fr) rather than 1fr: a bare 1fr track has min-width:auto, so
+       one long unbreakable child (the locked-package line) forces the whole
+       grid wider than the viewport. This was the 630px blowout at 360px. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 24px 14px;
   }
   .pk-field {
     display: flex;
     flex-direction: column;
+    min-width: 0;
   }
   .pk-field--full {
     grid-column: 1 / -1;
@@ -226,14 +230,17 @@ const bookingData = offered.map((p) => ({
   }
 
   .pk-input {
-    height: 52px;
-    padding: 0 16px;
+    min-height: 52px;
+    min-width: 0;
+    width: 100%;
+    padding: 14px 16px;
     background: var(--white);
     border: 1px solid rgba(0, 0, 0, 0.18);
     border-radius: 10px;
     color: var(--ink);
     font-family: var(--font-body);
-    font-size: 15px;
+    /* 16px is the floor: iOS zooms the page in on focus below it. */
+    font-size: 16px;
     outline: none;
     transition: border-color 0.2s ease;
   }
@@ -253,7 +260,7 @@ const bookingData = offered.map((p) => ({
   }
 
   .pk-textarea {
-    height: 120px;
+    min-height: 120px;
     padding: 16px;
     resize: vertical;
     line-height: 22px;
@@ -261,7 +268,7 @@ const bookingData = offered.map((p) => ({
 
   .pk-submit {
     grid-column: 1 / -1;
-    height: 50px;
+    min-height: 50px;
     margin-top: 12px;
     border: 0;
   }
@@ -304,20 +311,24 @@ const bookingData = offered.map((p) => ({
     text-transform: uppercase;
   }
   .bw-cal__nav {
-    width: 36px;
-    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tap);
+    min-height: var(--tap);
     border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 9999px;
     background: none;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 15px;
   }
   .bw-cal__nav:hover {
     border-color: var(--ink);
   }
   .bw-cal__dow {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    /* Seven tracks that are genuinely allowed to shrink. */
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 4px;
     margin-bottom: 6px;
   }
@@ -331,7 +342,7 @@ const bookingData = offered.map((p) => ({
   }
   .bw-cal__grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 4px;
   }
   /* Day and time buttons are built in JS, so they never carry Astro's scoping
@@ -339,16 +350,21 @@ const bookingData = offered.map((p) => ({
      that does exist in the template. Without this, none of these rules apply. */
   .bw-cal__grid :global(.bw-cal__day) {
     aspect-ratio: 1;
+    /* Below ~44px wide the cell stops being a reliable touch target, so it
+       grows taller instead of staying square. */
+    min-height: var(--tap);
+    min-width: 0;
+    padding: 0;
     border: 1px solid transparent;
     border-radius: 8px;
     background: none;
     font-family: var(--font-body);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--ink);
     cursor: pointer;
     transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease,
-      transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow 0.15s ease;
   }
   /* Hover reads as "you could pick this" — a tinted outline, never a fill,
      so it can't be mistaken for the selected state below. */
@@ -360,13 +376,15 @@ const bookingData = offered.map((p) => ({
     color: rgba(0, 0, 0, 0.22);
     cursor: default;
   }
+  /* Selection is drawn entirely inside the cell: an inset ring plus a fill.
+     The old scale(1.06) with an outer 3px box-shadow pushed the first and
+     last columns past the grid edge on narrow screens. */
   .bw-cal__grid :global(.bw-cal__day.is-selected) {
     background: var(--grad-accent);
     border-color: transparent;
     color: var(--white);
     font-weight: 800;
-    transform: scale(1.06);
-    box-shadow: 0 0 0 3px rgba(255, 105, 0, 0.28);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9);
   }
   .bw-cal__grid :global(.bw-cal__day:focus-visible),
   .bw-times :global(.bw-time:focus-visible) {
@@ -381,25 +399,31 @@ const bookingData = offered.map((p) => ({
     padding: 8px 0;
   }
 
+  /* A grid, not a wrapping flex row: up to 14 fixed-width pills could not fit
+     360px and spilled sideways. Tracks size themselves to the space available. */
   .bw-times {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
     gap: 8px;
   }
   .bw-times :global(.bw-time) {
-    height: 40px;
-    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--tap);
+    min-width: 0;
+    padding: 0 10px;
     border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 9999px;
     background: none;
     font-family: var(--font-body);
     font-weight: 700;
-    font-size: 13px;
-    letter-spacing: 1px;
+    font-size: 14px;
+    letter-spacing: 0.6px;
     color: var(--ink);
     cursor: pointer;
     transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease,
-      transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow 0.15s ease;
   }
   .bw-times :global(.bw-time:hover:not(.is-selected)) {
     border-color: var(--orange);
@@ -410,15 +434,7 @@ const bookingData = offered.map((p) => ({
     border-color: transparent;
     color: var(--white);
     font-weight: 800;
-    transform: scale(1.05);
-    box-shadow: 0 0 0 3px rgba(255, 105, 0, 0.28);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .bw-cal__grid :global(.bw-cal__day.is-selected),
-    .bw-times :global(.bw-time.is-selected) {
-      transform: none;
-    }
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
   }
 
   /* Plain-English confirmation of what's been picked */
@@ -498,14 +514,19 @@ const bookingData = offered.map((p) => ({
     display: flex;
     align-items: center;
     min-height: 52px;
-    padding: 0 16px;
+    /* Was a single unwrappable line, which is what forced the form grid to
+       630px on a 360px screen. */
+    min-width: 0;
+    padding: 12px 16px;
     border: 1px solid rgba(0, 0, 0, 0.15);
     border-radius: 10px;
     background: rgba(0, 0, 0, 0.03);
     font-family: var(--font-body);
     font-weight: 700;
     font-size: 14px;
+    line-height: 20px;
     color: var(--ink);
+    overflow-wrap: anywhere;
   }
 
   /* Personalised note above the form */
@@ -522,7 +543,29 @@ const bookingData = offered.map((p) => ({
 
   @media (max-width: 720px) {
     .pk-form {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .pk-book {
+      padding-top: 56px;
+      padding-bottom: 64px;
+    }
+  }
+
+  /* On a small phone the calendar is the widest thing on the page, so it
+     spans the full viewport instead of sitting inside the page gutter. That
+     buys back 2x var(--pad) and keeps all seven day cells above 44px. */
+  @media (max-width: 430px) {
+    .bw-cal {
+      margin-inline: calc(var(--pad) * -1);
+      border-inline: 0;
+      border-radius: 0;
+      padding: 12px max(12px, var(--safe-l));
+    }
+    .bw-times {
+      grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+    }
+    .pk-book__sub {
+      margin-bottom: 28px;
     }
   }
 </style>

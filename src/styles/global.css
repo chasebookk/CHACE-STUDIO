@@ -35,6 +35,16 @@
 
   --pad: 40px;
   --radius: 20px;
+
+  /* Minimum comfortable touch target. */
+  --tap: 44px;
+
+  /* Notch and home-bar insets. env() resolves to 0px on hardware without
+     them, so these are safe to use unconditionally. */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
 }
 
 @media (max-width: 720px) {
@@ -43,10 +53,32 @@
   }
 }
 
+/* Small phones (360 to 430 CSS px) need the gutter back as content width. */
+@media (max-width: 430px) {
+  :root {
+    --pad: 16px;
+  }
+}
+
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+/* Media never widens its container. Deliberately not using overflow-x:hidden
+   on the body: that would mask real overflow rather than fix it, and it
+   breaks position:sticky in several browsers. */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+/* An unbroken string (a long email, a URL) must not set the page width. */
+body {
+  overflow-wrap: break-word;
 }
 
 html {
@@ -107,14 +139,16 @@ a {
 
 .section {
   border-top: 1px solid var(--line);
-  padding: 0 var(--pad);
+  padding-left: max(var(--pad), var(--safe-l));
+  padding-right: max(var(--pad), var(--safe-r));
 }
 
 /* White "rate card" section shell */
 .sec-light {
   background: var(--white);
   color: var(--ink);
-  padding: 0 var(--pad);
+  padding-left: max(var(--pad), var(--safe-l));
+  padding-right: max(var(--pad), var(--safe-r));
 }
 .sec-light .display {
   color: var(--ink);
@@ -165,13 +199,16 @@ a {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  height: 50px;
-  padding: 0 24px;
+  /* min-height, not height, so a wrapped label grows the button instead of
+     spilling out of it. */
+  min-height: 50px;
+  padding: 12px 24px;
   font-family: var(--font-body);
   font-weight: 700;
   font-size: 12px;
   letter-spacing: 3px;
   text-transform: uppercase;
+  text-align: center;
   color: var(--white);
   border: 1px solid transparent;
   cursor: pointer;
