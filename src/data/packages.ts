@@ -120,6 +120,25 @@ export const GROUPS: PackageGroup[] = [
           '15% off automatically when you book more than one look',
         ],
       },
+      {
+        slug: 'graduation',
+        title: 'Graduation',
+        image: '/assets/img/pricing/graduation.jpg',
+        tagline:
+          'The gown, the cap, the walk across the stage. Photographed properly, once, so it lasts.',
+        prices: [
+          { amount: '£170', label: 'solo, 1 look, 6 edited studio images' },
+          { amount: '£200', label: 'with family and friends, 6 edited images' },
+        ],
+        highlight:
+          'Studio and venue coverage, £300. We photograph your studio session, then join you at the ceremony for the stage moment, the certificate, and the people who got you there.',
+        bullets: [
+          'Studio session against a clean backdrop, gown and cap',
+          'Bring family and friends into frame on the £200 tier',
+          'Additional edited images available on request',
+          'Private online gallery to choose your favourites',
+        ],
+      },
     ],
   },
   {

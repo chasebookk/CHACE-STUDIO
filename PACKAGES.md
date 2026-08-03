@@ -14,6 +14,7 @@ Every package card uses one 1:1 square image from `public/assets/img/pricing/` (
 | Maternity Shoot | `pricing/maternity.jpg` |
 | Kids Shoot | `pricing/baby-shoot.jpg` |
 | Family Shoot | `pricing/family.jpg` |
+| Graduation | `pricing/graduation.jpg` |
 | Pre-Wedding & Engagement | `pricing/pre-wedding-engagement.jpg` |
 | Civil Wedding | `pricing/civil-wedding.jpg` |
 | Event Shoot | `pricing/events.jpg` |
@@ -137,6 +138,27 @@ Show the saving live, e.g. "3 looks, £750, less 15%, you pay £637.50".
 - Coordinated group and individual frames in the same session
 - Works for milestone birthdays, anniversaries and reunions
 - **15% off automatically when you book more than one look**
+
+## Graduation
+`pricing/graduation.jpg`
+
+| Tier | Price | Included | Session | Charge |
+|---|---|---|---|---|
+| Studio, solo | £170 | 1 look, 6 edited studio images | 1 hour | 100% |
+| Studio, with family and friends | £200 | 1 look, 6 edited studio images | 1 hour | 100% |
+| Studio and venue coverage | £300 | 6 edited studio images plus 6 from the venue | 2 hours | 80% deposit |
+
+Card shows: £170 and £200. The £300 studio and venue tier sits in the dropdown.
+
+**Do not print the hour counts in the tier labels.** Durations exist only so the calendar blocks the right amount of time.
+
+> The gown, the cap, the walk across the stage. Photographed properly, once, so it lasts.
+
+- Studio session against a clean backdrop, gown and cap
+- Bring family and friends into frame on the £200 tier
+- **Studio and venue coverage £300:** we photograph your studio session, then join you at the ceremony for the stage moment, the certificate, and the people who got you there
+- Additional edited images available on request
+- Private online gallery to choose your favourites
 
 ---
 

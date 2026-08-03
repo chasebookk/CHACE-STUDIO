@@ -197,6 +197,39 @@ export const PACKAGES: BookablePackage[] = [
     tiers: familyTiers(),
   },
   {
+    // Graduation tiers vary by who is in frame and whether we travel to the
+    // ceremony, not by look count, so the labels carry no hour counts. The
+    // durations are here purely so the calendar blocks the right slot.
+    slug: 'graduation',
+    title: 'Graduation',
+    tiers: [
+      {
+        id: 'graduation-studio',
+        label: 'Studio, solo',
+        includes: '1 look, 6 edited studio images',
+        pricePence: 17000,
+        charge: 'full',
+        durationMin: 60,
+      },
+      {
+        id: 'graduation-family',
+        label: 'Studio, with family and friends',
+        includes: '1 look, 6 edited studio images',
+        pricePence: 20000,
+        charge: 'full',
+        durationMin: 60,
+      },
+      {
+        id: 'graduation-venue',
+        label: 'Studio and venue coverage',
+        includes: '6 edited studio images plus 6 from the venue',
+        pricePence: 30000,
+        charge: 'deposit',
+        durationMin: 120,
+      },
+    ],
+  },
+  {
     slug: 'pre-wedding-engagement',
     title: 'Pre-Wedding & Engagement',
     tiers: [

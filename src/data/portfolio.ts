@@ -10,7 +10,7 @@ const COUNTS: Record<string, number> = {
   'pre-wedding': 3,
   family: 5,
   'baby-shoots': 6,
-  graduation: 22,
+  graduation: 43,
   fashion: 9,
 };
 
