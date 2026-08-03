@@ -226,6 +226,7 @@ const mins = (b: BookingRow) => {
       </form>
 
       {blocked.length > 0 && (
+        <div class="ad__scroll">
         <table class="ad__table ad__table--compact">
           <tbody>
             {blocked.map((bl) => (
@@ -243,6 +244,7 @@ const mins = (b: BookingRow) => {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </section>
   </main>
