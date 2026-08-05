@@ -50,8 +50,34 @@ async function unsplash(q: string, page: number): Promise<StockImage[]> {
   }));
 }
 
+async function pexels(q: string, page: number): Promise<StockImage[]> {
+  const key = env('PEXELS_API_KEY');
+  if (!key) throw new Error('missing key');
+
+  const url = new URL('https://api.pexels.com/v1/search');
+  url.searchParams.set('query', q);
+  url.searchParams.set('per_page', '24');
+  url.searchParams.set('page', String(page));
+
+  // Pexels takes the key raw in Authorization, with no scheme prefix.
+  const res = await fetch(url, { headers: { Authorization: key } });
+  if (!res.ok) throw new Error(`pexels ${res.status}`);
+  const data = await res.json();
+
+  return (data.photos ?? []).map((p: any) => ({
+    id: String(p.id),
+    thumb: p.src?.medium,
+    full: p.src?.large,
+    author: p.photographer ?? 'Unknown',
+    // Pexels' licence asks for the photographer to be credited and linked.
+    sourceUrl: p.url ?? 'https://www.pexels.com',
+    source: 'pexels',
+  }));
+}
+
 const PROVIDERS: Record<string, { envKey: string; search: (q: string, page: number) => Promise<StockImage[]> }> = {
   unsplash: { envKey: 'UNSPLASH_ACCESS_KEY', search: unsplash },
+  pexels: { envKey: 'PEXELS_API_KEY', search: pexels },
 };
 
 export const GET: APIRoute = async ({ params, url }) => {

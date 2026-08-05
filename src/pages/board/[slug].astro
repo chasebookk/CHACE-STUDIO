@@ -2030,7 +2030,11 @@ const PRESETS = [
   const chaceGrid = document.querySelector<HTMLElement>('[data-drawer-grid]')!;
   const chaceFilters = document.querySelector<HTMLElement>('[data-panel-filters="chace"]')!;
   const stockPanel = document.querySelector<HTMLElement>('[data-panel-filters="stock"]');
-  let provider = 'unsplash';
+  // Whichever stock tab is rendered first, rather than assuming Unsplash: the
+  // tabs are driven by which API keys are configured, so hardcoding a provider
+  // would break the drawer if that one key were ever absent.
+  let provider =
+    document.querySelector<HTMLElement>('[data-tab]:not([data-tab="chace"])')?.dataset.tab ?? 'unsplash';
 
   function setTab(name: string) {
     const isChace = name === 'chace';
