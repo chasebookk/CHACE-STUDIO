@@ -244,6 +244,7 @@ async function handleContractPayment(session: Stripe.Checkout.Session): Promise<
 
   const paymentIntent =
     typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
+  const amountTotal = session.amount_total ?? 0;
 
   const found = await query<ContractRow>(`SELECT * FROM contracts WHERE id = $1`, [contractId]);
   const row = found.rows[0];
@@ -262,59 +263,76 @@ async function handleContractPayment(session: Stripe.Checkout.Session): Promise<
     return;
   }
 
-  // One booking per day, each holding the whole day. Deliberately not checking
-  // slotIsFree: these dates were promised in a signed agreement, so a clash is
-  // something to flag to the studio, not a reason to refuse the wedding.
+  // The two days were already held as pending_payment when the contract was
+  // signed. Payment turns those holds into confirmed bookings; it does not
+  // create them. Confirming by ref means a hold that expired mid-checkout is
+  // revived rather than lost, which is the right outcome once money has
+  // actually been taken.
   const bookingIds: number[] = [];
   try {
     for (const [i, day] of contract.days.entries()) {
       const dayRef = `${row.ref}-D${i + 1}`;
       const { rows } = await query<{ id: number }>(
+        `UPDATE bookings
+            SET status = 'paid_in_full',
+                paid_pence = $2,
+                total_pence = GREATEST(total_pence, $2),
+                balance_pence = 0,
+                expires_at = NULL,
+                stripe_session_id = COALESCE(stripe_session_id, $3),
+                stripe_payment_intent = COALESCE($4, stripe_payment_intent)
+          WHERE ref = $1
+          RETURNING id`,
+        // Only day one carries the session id and the money, so the books add
+        // up once. bookings_stripe_session_idx is unique, so day two must not
+        // reuse it.
+        [dayRef, i === 0 ? amountTotal : 0, i === 0 ? session.id : null, paymentIntent ?? null]
+      );
+      if (rows[0]) {
+        bookingIds.push(rows[0].id);
+        continue;
+      }
+
+      // No hold to confirm: recreate it, because the payment is real and the
+      // date must be blocked whatever happened to the hold.
+      console.error(`[contract] hold ${dayRef} missing at payment, recreating`);
+      const recreated = await query<{ id: number }>(
         `INSERT INTO bookings
            (ref, package_slug, tier_label, total_pence, paid_pence, balance_pence,
             name, email, phone, location_type, address, notes,
             date, start_time, end_time, status, stripe_session_id, stripe_payment_intent)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'on_location',$10,$11,$12,$13,$14,'deposit_paid',$15,$16)
+         VALUES ($1,$2,$3,$4,$5,0,$6,$7,$8,'on_location',$9,$10,$11,$12,$13,
+                 'paid_in_full',$14,$15)
          ON CONFLICT (ref) DO NOTHING
          RETURNING id`,
         [
           dayRef,
           CONTRACT_PACKAGE_SLUG,
           `${contract.title}, day ${i + 1} of ${contract.days.length}, ${day.heading}`,
-          // The agreed total and the deposit sit on day one so the books add
-          // up once; day two is the same booking, not a second sale.
-          i === 0 ? row.total_pence : 0,
-          i === 0 ? row.deposit_pence : 0,
-          i === 0 ? row.balance_pence : 0,
-          `${row.signer_name} & ${row.partner_name}`,
+          i === 0 ? amountTotal : 0,
+          i === 0 ? amountTotal : 0,
+          `${row.signer_name}${row.partner_name ? ` & ${row.partner_name}` : ''}`,
           row.email,
           row.phone,
           i === 0 ? row.venue_day1 : row.venue_day2,
-          [`Contract ${row.ref}.`, row.notes ? `Client notes: ${row.notes}` : '']
-            .filter(Boolean)
-            .join(' '),
+          `Contract ${row.ref}. Hold had expired; recreated on payment.`,
           day.date,
           day.blockFrom,
           day.blockTo,
-          // Only day one carries the session id: bookings_stripe_session_idx is
-          // a unique index that deliberately stops one checkout producing two
-          // bookings. Idempotency here comes from the deterministic -D1/-D2
-          // refs and ON CONFLICT DO NOTHING instead.
           i === 0 ? session.id : null,
           paymentIntent ?? null,
         ]
       );
-      if (rows[0]) bookingIds.push(rows[0].id);
+      if (recreated.rows[0]) bookingIds.push(recreated.rows[0].id);
     }
   } catch (err) {
-    // The payment is real even if the calendar write failed; record the
-    // payment and shout, rather than letting Stripe retry the whole event.
     console.error(`[contract] CALENDAR WRITE FAILED for ${row.ref}, block 17/18 Aug manually:`, err);
   }
 
   const updated = await query<ContractRow>(
     `UPDATE contracts
         SET status = 'paid', paid_at = now(),
+            balance_pence = 0,
             stripe_payment_intent = COALESCE($2, stripe_payment_intent),
             booking_ids = $3
       WHERE id = $1

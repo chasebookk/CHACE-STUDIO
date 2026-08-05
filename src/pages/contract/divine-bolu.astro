@@ -12,14 +12,13 @@ import {
   money,
   longDate,
   shortDate,
-  balancePence,
   discountPence,
 } from '../../config/contracts';
 
 const contract = getContract('divine-bolu')!;
 const [day1, day2] = contract.days;
-const balance = balancePence(contract);
 const discount = discountPence(contract);
+const dayTwoPence = contract.priceRows[2]!.pence;
 
 // Returning from an abandoned Stripe checkout: the agreement is already on
 // file, so say so rather than making them wonder if it saved.
@@ -119,6 +118,17 @@ const today = new Date().toLocaleDateString('en-GB', {
             </tbody>
           </table>
 
+          <div class="ct-waived">
+            <div class="ct-waived__row">
+              <span>Day one, both the studio session and the venue coverage</span>
+              <span class="ct-waived__free">Included, no charge</span>
+            </div>
+            <div class="ct-waived__row">
+              <span>Day two, wedding coverage</span>
+              <span>{money(dayTwoPence)} reduced to <strong>{money(contract.agreedTotalPence)}</strong></span>
+            </div>
+          </div>
+
           <div class="ct-agreed">
             <div class="ct-agreed__row">
               <span class="ct-agreed__label">Your agreed rate</span>
@@ -137,13 +147,11 @@ const today = new Date().toLocaleDateString('en-GB', {
           </p>
 
           <div class="ct-pay">
-            <div class="ct-pay__item">
-              <span class="ct-pay__amount">{money(contract.depositPence)} today</span>
-              <span class="ct-pay__note">secures both dates</span>
-            </div>
-            <div class="ct-pay__item">
-              <span class="ct-pay__amount">{money(balance)}</span>
-              <span class="ct-pay__note">due on or immediately after the second day</span>
+            <div class="ct-pay__item ct-pay__item--single">
+              <span class="ct-pay__amount">{money(contract.agreedTotalPence)}, paid once</span>
+              <span class="ct-pay__note">
+                One payment covering both days. Nothing further to pay, no balance to follow.
+              </span>
             </div>
           </div>
 
@@ -204,8 +212,12 @@ const today = new Date().toLocaleDateString('en-GB', {
             </label>
 
             <label class="ct-field">
-              <span class="ct-label">Partner's full name <span aria-hidden="true">*</span></span>
-              <input class="ct-input" type="text" name="partner_name" value={contract.partnerName} required />
+              <span class="ct-label">Partner's first name</span>
+              <input class="ct-input" type="text" name="partner_name" value={contract.partnerName} />
+              <span class="ct-hint">
+                For our records only. This agreement is between you and CHACE STUDIOS, and
+                only your signature is needed.
+              </span>
             </label>
 
             <label class="ct-field">
@@ -272,12 +284,13 @@ const today = new Date().toLocaleDateString('en-GB', {
           <p class="ct-error" data-error role="alert" hidden></p>
 
           <button type="submit" class="btn btn--fill ct-submit" data-submit>
-            Agree and pay {money(contract.depositPence)}
+            Agree and pay {money(contract.agreedTotalPence)}
           </button>
 
           <p class="ct-secure">
             Secure payment by Stripe. Card, Apple Pay, Google Pay, Klarna and Pay by Bank.
-            {' '}{money(balance)} balance due after {shortDate(day2!.date)}.
+            Both dates are held for 30 minutes while you pay, and confirmed the moment the
+            payment clears.
           </p>
         </form>
       </div>
@@ -504,6 +517,32 @@ const today = new Date().toLocaleDateString('en-GB', {
     gap: 10px;
     margin-bottom: 20px;
   }
+  .ct-waived {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+    border-radius: 12px;
+    background: rgba(255, 166, 0, 0.09);
+    border-left: 3px solid var(--orange);
+  }
+  .ct-waived__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 16px;
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--ink);
+  }
+  .ct-waived__free {
+    font-weight: 800;
+    color: #0a7a3d;
+    white-space: nowrap;
+  }
+
   .ct-pay__item {
     display: flex;
     flex-direction: column;

@@ -25,8 +25,9 @@ export interface ContractDay {
 
 export interface Contract {
   slug: string;
-  /** Prefilled into the form, editable by the signer. */
+  /** The sole contracting party. Only this person signs. */
   signerName: string;
+  /** Named for context only. Not a party, not required, never signs. */
   partnerName: string;
   title: string;
   eyebrow: string;
@@ -37,8 +38,10 @@ export interface Contract {
   days: ContractDay[];
   priceRows: PriceRow[];
   standardTotalPence: number;
+  /** Charged in full, in one payment. There is no deposit and no balance. */
   agreedTotalPence: number;
-  depositPence: number;
+  /** What day one would have cost, waived entirely. */
+  dayOneWaivedPence: number;
   acknowledgements: { id: string; label: string }[];
   terms: { heading: string; body: string }[];
   included: string[];
@@ -93,7 +96,7 @@ const DIVINE_BOLU: Contract = {
   ],
   standardTotalPence: 317000,
   agreedTotalPence: 50000,
-  depositPence: 40000,
+  dayOneWaivedPence: 87500,
 
   acknowledgements: [
     { id: 'ack_read', label: 'I have read this agreement in full and I understand what is included and what is not.' },
@@ -112,8 +115,8 @@ const DIVINE_BOLU: Contract = {
     { heading: 'Timings', body: 'Schedules given are approximate. Weddings run late. CHACE STUDIOS will remain flexible and adapt to the day as it unfolds. Significant overrun beyond the contracted hours may be chargeable and will be discussed at the time rather than added afterwards.' },
     { heading: 'Delivery', body: 'A private online gallery will be provided for selection. Final edited images are delivered 7 to 10 days after selection, with retouching completed within 4 to 6 working days of that selection.' },
     { heading: 'Creative approach', body: 'CHACE STUDIOS retains creative control over styling, framing and post-production, consistent with the work shown in the pre-wedding session.' },
-    { heading: 'Payment', body: '£400 secures both dates. The remaining £100 is due on or immediately after 18 August 2026.' },
-    { heading: 'Cancellation', body: 'The deposit secures the dates and is non-refundable, as those dates are then held exclusively and turned away from other clients.' },
+    { heading: 'Payment', body: '£500 is payable in full at signing, as a single payment. This one payment covers both days. There is no deposit and no balance to follow.' },
+    { heading: 'Cancellation', body: 'Payment secures both dates and is non-refundable, as those dates are then held exclusively and turned away from other clients.' },
     { heading: 'Confidentiality of rate', body: 'The rate in this agreement is private and specific to this booking.' },
     { heading: 'Use of images', body: 'CHACE STUDIOS may use selected images for portfolio and social media. If you would prefer otherwise, say so in the notes below and it will be honoured.' },
     { heading: 'Force majeure', body: 'In the event of illness, accident or circumstances genuinely beyond control, CHACE STUDIOS will arrange a suitably qualified replacement photographer or refund all monies paid.' },
@@ -146,10 +149,6 @@ export const CONTRACT_PACKAGE_SLUG = 'wedding-contract';
 export function contractBookingTitle(packageSlug: string): string | undefined {
   if (packageSlug !== CONTRACT_PACKAGE_SLUG) return undefined;
   return 'Wedding Coverage';
-}
-
-export function balancePence(c: Contract): number {
-  return c.agreedTotalPence - c.depositPence;
 }
 
 export function discountPence(c: Contract): number {

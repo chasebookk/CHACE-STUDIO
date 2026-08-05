@@ -181,6 +181,9 @@ CREATE TABLE IF NOT EXISTS contracts (
   ip TEXT,
 
   total_pence INT NOT NULL,
+  -- This contract is paid in full in one payment, so deposit_pence carries the
+  -- whole amount and balance_pence is 0. The columns are kept general in case a
+  -- future contract does split its payment.
   deposit_pence INT NOT NULL,
   balance_pence INT NOT NULL,
   status TEXT NOT NULL DEFAULT 'signed',

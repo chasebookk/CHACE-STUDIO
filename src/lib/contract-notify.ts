@@ -3,7 +3,6 @@ import {
   getContract,
   money,
   longDate,
-  balancePence,
   discountPence,
   type Contract,
 } from '../config/contracts';
@@ -87,16 +86,16 @@ function scheduleTable(c: Contract, r: ContractRow): string {
 
 function confirmationBody(c: Contract, r: ContractRow, forOwner: boolean): string {
   const heading = forOwner
-    ? `Contract signed and deposit paid, ${esc(r.signer_name)}`
+    ? `Contract signed and paid in full, ${esc(r.signer_name)}`
     : `You're booked in, ${esc(r.signer_name.split(' ')[0])}.`;
 
   const intro = forOwner
-    ? `Both dates are now held and blocked in the calendar. Reference <strong style="color:#111">${esc(r.ref)}</strong>.`
-    : `Both of your wedding dates are secured. Reference <strong style="color:#111">${esc(r.ref)}</strong>, quote it in any message to us.`;
+    ? `Paid in full. Both dates are now confirmed and blocked in the calendar. Reference <strong style="color:#111">${esc(r.ref)}</strong>.`
+    : `Both of your wedding dates are secured and paid in full. Reference <strong style="color:#111">${esc(r.ref)}</strong>, quote it in any message to us.`;
 
   const contactBlock = forOwner
     ? `<table style="width:100%;border-collapse:collapse;margin-top:18px">
-         ${row('Client', `${esc(r.signer_name)} &amp; ${esc(r.partner_name)}`)}
+         ${row('Client', esc(r.signer_name) + (r.partner_name ? ` &amp; ${esc(r.partner_name)}` : ''))}
          ${row('Email', `<a href="mailto:${esc(r.email)}" style="color:#111">${esc(r.email)}</a>`)}
          ${row('Mobile', `<a href="tel:${esc(r.phone)}" style="color:#111">${esc(r.phone)}</a>`)}
        </table>`
@@ -117,9 +116,9 @@ function confirmationBody(c: Contract, r: ContractRow, forOwner: boolean): strin
     ${scheduleTable(c, r)}
     ${contactBlock}
     <table style="width:100%;border-collapse:collapse;margin-top:18px">
-      ${row('Paid today', `<strong>${money(r.deposit_pence)}</strong>`)}
-      ${row('Balance to come', `${money(r.balance_pence)}, due on or immediately after ${longDate(c.days[1]!.date)}`)}
-      ${row('Agreed total', money(r.total_pence))}
+      ${row('Agreed total', `<strong>${money(r.total_pence)}</strong>`)}
+      ${row('Paid', `${money(r.deposit_pence)}, in full, one payment`)}
+      ${row('Balance to come', 'None. Nothing further to pay.')}
     </table>
     ${notesBlock}
     <div style="margin-top:20px;padding:16px;background:#fff6e8;border-radius:10px;color:#5a3b00;font-size:13px;line-height:20px">
@@ -153,7 +152,8 @@ function contractCopyBody(c: Contract, r: ContractRow, forOwner: boolean): strin
     <table style="width:100%;border-collapse:collapse">
       ${row('Signed by', esc(r.signature_name))}
       ${row('Date signed', longDate(r.signed_date))}
-      ${row('Parties', `${esc(r.signer_name)} and ${esc(r.partner_name)}, with CHACE STUDIOS`)}
+      ${row('Parties', `${esc(r.signer_name)} and CHACE STUDIOS`)}
+      ${r.partner_name ? row('Partner (named for context)', esc(r.partner_name)) : ''}
       ${row('Email', esc(r.email))}
       ${row('Mobile', esc(r.phone))}
     </table>
@@ -177,8 +177,8 @@ function contractCopyBody(c: Contract, r: ContractRow, forOwner: boolean): strin
       ${row('<strong>Standard total</strong>', `<strong>${money(c.standardTotalPence)}</strong>`)}
       ${row('<strong>Agreed rate</strong>', `<strong>${money(c.agreedTotalPence)}</strong>`)}
       ${row('Discount applied', money(discountPence(c)))}
-      ${row('Paid today', money(r.deposit_pence))}
-      ${row('Balance', money(r.balance_pence))}
+      ${row('Paid in full', money(r.deposit_pence))}
+      ${row('Balance', 'None')}
     </table>
 
     <h2 style="margin:24px 0 10px;font-size:15px;color:#111">Included</h2>

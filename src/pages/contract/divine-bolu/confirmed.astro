@@ -1,5 +1,5 @@
 ---
-// Landing page after a successful contract deposit. Reached by redirect from
+// Landing page after a successful contract payment. Reached by redirect from
 // Stripe, so it reads the contract by ref rather than trusting anything typed.
 export const prerender = false;
 
@@ -7,7 +7,7 @@ import Base from '../../../layouts/Base.astro';
 import Header from '../../../components/Header.astro';
 import Footer from '../../../components/Footer.astro';
 import { query } from '../../../lib/db';
-import { getContract, money, longDate, balancePence } from '../../../config/contracts';
+import { getContract, money, longDate } from '../../../config/contracts';
 import { MAPS_URL, ADDRESS, EMAIL } from '../../../data/portfolio';
 
 const contract = getContract('divine-bolu')!;
@@ -68,12 +68,12 @@ if (ref) {
         <h2 class="cf-h2">Payment</h2>
         <div class="cf-pay">
           <div class="cf-pay__row">
-            <span>Paid today</span>
-            <strong>{money(contract.depositPence)}</strong>
+            <span>Paid in full, one payment, covering both days</span>
+            <strong>{money(contract.agreedTotalPence)}</strong>
           </div>
           <div class="cf-pay__row">
-            <span>Balance due on or immediately after {longDate(day2!.date)}</span>
-            <strong>{money(balancePence(contract))}</strong>
+            <span>Balance to come</span>
+            <strong>None</strong>
           </div>
         </div>
 
