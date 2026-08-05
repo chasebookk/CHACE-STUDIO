@@ -154,3 +154,43 @@ CREATE TABLE IF NOT EXISTS training_consents (
 );
 
 CREATE INDEX IF NOT EXISTS training_consents_created_idx ON training_consents (created_at DESC);
+
+-- ---- Private client contracts ----
+-- A signed agreement, saved before payment is attempted so a signature is
+-- never lost to a Stripe or network failure. Append-only: never rewrite a
+-- signed row. `booking_ids` links to the bookings created once paid.
+CREATE TABLE IF NOT EXISTS contracts (
+  id SERIAL PRIMARY KEY,
+  slug TEXT NOT NULL,
+  ref TEXT UNIQUE NOT NULL,
+
+  signer_name TEXT NOT NULL,
+  partner_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  venue_day1 TEXT NOT NULL,
+  venue_day2 TEXT NOT NULL,
+  notes TEXT,
+
+  -- Every acknowledgement box, stored as given rather than as one flag, so
+  -- the signed record shows exactly what was agreed to.
+  acknowledgements JSONB NOT NULL,
+
+  signature_name TEXT NOT NULL,
+  signed_date DATE NOT NULL,
+  ip TEXT,
+
+  total_pence INT NOT NULL,
+  deposit_pence INT NOT NULL,
+  balance_pence INT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'signed',
+  stripe_session_id TEXT,
+  stripe_payment_intent TEXT,
+  booking_ids INT[],
+  paid_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS contracts_slug_idx ON contracts (slug);
+CREATE UNIQUE INDEX IF NOT EXISTS contracts_stripe_session_idx
+  ON contracts (stripe_session_id) WHERE stripe_session_id IS NOT NULL;

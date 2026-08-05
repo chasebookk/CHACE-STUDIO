@@ -32,7 +32,7 @@ export function locationLine(b: BookingRow): string {
 }
 
 function packageTitle(b: BookingRow): string {
-  return getPackage(b.package_slug)?.title ?? b.package_slug;
+  return getPackage(b.package_slug)?.title ?? contractBookingTitle(b.package_slug) ?? b.package_slug;
 }
 
 function icsFor(b: BookingRow): Attachment {

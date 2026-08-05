@@ -5,6 +5,7 @@ import { checkAdminAuth, unauthorized } from '../lib/auth';
 import { getPackage, getStudio, PACKAGES as BOOKABLE } from '../config/booking';
 import { getCard } from '../data/packages';
 import { travelLabel, REQUIRED_CONSENTS, type ConsentRow } from '../lib/training';
+import { contractBookingTitle } from '../config/contracts';
 
 const siteBase = (import.meta.env.PUBLIC_SITE_URL ?? Astro.url.origin).replace(/\/$/, '');
 const shareLinks = BOOKABLE.map((p) => ({
@@ -63,7 +64,8 @@ const where = (b: BookingRow) =>
     ? `On location, ${b.address || 'TBC'}`
     : (getStudio(b.studio_id)?.name ?? 'CHACE STUDIOS');
 
-const pkgTitle = (b: BookingRow) => getPackage(b.package_slug)?.title ?? b.package_slug;
+const pkgTitle = (b: BookingRow) =>
+  getPackage(b.package_slug)?.title ?? contractBookingTitle(b.package_slug) ?? b.package_slug;
 
 // Agenda: confirmed, still-upcoming bookings grouped by day.
 const todayIso = new Date().toISOString().slice(0, 10);

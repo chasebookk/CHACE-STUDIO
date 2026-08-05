@@ -1,0 +1,848 @@
+---
+// Private wedding contract. Rate is confidential, so this is never indexed
+// and never linked from anywhere public.
+export const prerender = false;
+
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import Slideshow from '../../components/Slideshow.astro';
+import {
+  getContract,
+  money,
+  longDate,
+  shortDate,
+  balancePence,
+  discountPence,
+} from '../../config/contracts';
+
+const contract = getContract('divine-bolu')!;
+const [day1, day2] = contract.days;
+const balance = balancePence(contract);
+const discount = discountPence(contract);
+
+// Returning from an abandoned Stripe checkout: the agreement is already on
+// file, so say so rather than making them wonder if it saved.
+const alreadySigned = Astro.url.searchParams.get('signed') === '1';
+
+const today = new Date().toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
+---
+
+<Base
+  title={`Private Agreement, ${contract.title} | CHACE STUDIOS`}
+  description="Private wedding photography agreement."
+  robots="noindex, nofollow"
+>
+  <Header />
+
+  <main class="ct">
+    <!-- Dark cinematic header -->
+    <section class="ct-hero">
+      <p class="eyebrow ct-hero__eyebrow">{contract.eyebrow}</p>
+      <h1 class="display ct-hero__title">{contract.title}</h1>
+      <p class="ct-hero__sub">
+        Wedding Photography Coverage
+        <span class="ct-dot">·</span>
+        {shortDate(day1!.date)} and {shortDate(day2!.date)}
+      </p>
+    </section>
+
+    <section class="ct-body sec-light">
+      <div class="ct-inner">
+        {alreadySigned && (
+          <div class="ct-resume">
+            <strong>Your agreement is saved.</strong> You left before completing payment.
+            Everything below is as you signed it. Sign again at the bottom to reopen the
+            secure payment page.
+          </div>
+        )}
+
+        <!-- Opening -->
+        <div class="ct-open">
+          <p class="ct-open__lead">Divine, thank you.</p>
+          <p>
+            You have trusted CHACE STUDIOS with every step of this story: the proposal, the
+            pre-wedding session, and now both wedding days. That means a great deal, and this
+            agreement reflects it.
+          </p>
+          <p>
+            Please take your time reading this. It sets out exactly what is covered, what is
+            not, and what we each need from the other. When you are happy, sign at the bottom
+            and you will be taken to payment.
+          </p>
+        </div>
+
+        <div class="ct-panel">
+          <Slideshow images={contract.images} caption={contract.imageCaption} />
+        </div>
+
+        <!-- Schedule -->
+        <h2 class="ct-h2">Schedule of services</h2>
+        <div class="ct-days">
+          {contract.days.map((d, i) => (
+            <div class="ct-day">
+              <p class="ct-day__no">Day {i === 0 ? 'one' : 'two'}</p>
+              <p class="ct-day__date">{longDate(d.date)}</p>
+              <p class="ct-day__heading">{d.heading}</p>
+              <ul class="ct-day__list">
+                {d.items.map((item) => <li>{item}</li>)}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <!-- Investment -->
+        <h2 class="ct-h2">Your investment</h2>
+        <div class="ct-price">
+          <table class="ct-table">
+            <thead>
+              <tr><th scope="col">Item</th><th scope="col">Standard rate</th></tr>
+            </thead>
+            <tbody>
+              {contract.priceRows.map((p) => (
+                <tr>
+                  <td>
+                    {p.label}
+                    {p.note && <span class="ct-table__note">{p.note}</span>}
+                  </td>
+                  <td class="ct-table__num">{money(p.pence)}</td>
+                </tr>
+              ))}
+              <tr class="ct-table__total">
+                <td>Standard total</td>
+                <td class="ct-table__num">{money(contract.standardTotalPence)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="ct-agreed">
+            <div class="ct-agreed__row">
+              <span class="ct-agreed__label">Your agreed rate</span>
+              <span class="display ct-agreed__amount">{money(contract.agreedTotalPence)}</span>
+            </div>
+            <div class="ct-agreed__row ct-agreed__row--sub">
+              <span>Discount applied</span>
+              <span>{money(discount)}</span>
+            </div>
+          </div>
+
+          <p class="ct-because">
+            This rate is offered in recognition of you choosing CHACE STUDIOS for every part
+            of this journey, from the proposal through to the wedding itself. It is specific
+            to you and to this booking.
+          </p>
+
+          <div class="ct-pay">
+            <div class="ct-pay__item">
+              <span class="ct-pay__amount">{money(contract.depositPence)} today</span>
+              <span class="ct-pay__note">secures both dates</span>
+            </div>
+            <div class="ct-pay__item">
+              <span class="ct-pay__amount">{money(balance)}</span>
+              <span class="ct-pay__note">due on or immediately after the second day</span>
+            </div>
+          </div>
+
+          <p class="ct-confidential">
+            The rate in this agreement is confidential and offered privately to
+            {' '}{contract.signerName.split(' ')[0]} and {contract.partnerName}. Please do not
+            share it. CHACE STUDIOS' published rates remain as advertised.
+          </p>
+        </div>
+
+        <!-- Included / not included -->
+        <div class="ct-cols">
+          <div>
+            <h2 class="ct-h2">What is included</h2>
+            <ul class="ct-list ct-list--yes">
+              {contract.included.map((i) => <li>{i}</li>)}
+            </ul>
+          </div>
+          <div>
+            <h2 class="ct-h2">What is not included</h2>
+            <ul class="ct-list ct-list--no">
+              {contract.excluded.map((i) => <li>{i}</li>)}
+            </ul>
+          </div>
+        </div>
+
+        <!-- Terms -->
+        <h2 class="ct-h2">Terms and conditions</h2>
+        <ol class="ct-terms">
+          {contract.terms.map((t) => (
+            <li>
+              <strong>{t.heading}.</strong> {t.body}
+            </li>
+          ))}
+        </ol>
+
+        <!-- Agreement form -->
+        <form class="ct-form" method="post" action="/api/contract" data-contract-form>
+          <input type="hidden" name="slug" value={contract.slug} />
+
+          <fieldset class="ct-set ct-set--ack">
+            <legend class="ct-legend">Acknowledgement</legend>
+            <p class="ct-setnote">All of these must be ticked before you can continue to payment.</p>
+            {contract.acknowledgements.map((a) => (
+              <label class="ct-check">
+                <input type="checkbox" name={a.id} required data-ack />
+                <span class="ct-check__text" set:html={a.label} />
+              </label>
+            ))}
+          </fieldset>
+
+          <fieldset class="ct-set">
+            <legend class="ct-legend">Your details</legend>
+
+            <label class="ct-field">
+              <span class="ct-label">Full name of signing party <span aria-hidden="true">*</span></span>
+              <input class="ct-input" type="text" name="signer_name" value={contract.signerName} autocomplete="name" required />
+            </label>
+
+            <label class="ct-field">
+              <span class="ct-label">Partner's full name <span aria-hidden="true">*</span></span>
+              <input class="ct-input" type="text" name="partner_name" value={contract.partnerName} required />
+            </label>
+
+            <label class="ct-field">
+              <span class="ct-label">Email address <span aria-hidden="true">*</span></span>
+              <input class="ct-input" type="email" name="email" inputmode="email" autocomplete="email" required />
+              <span class="ct-hint">Your confirmation and a copy of this agreement are sent here.</span>
+            </label>
+
+            <label class="ct-field">
+              <span class="ct-label">Mobile number <span aria-hidden="true">*</span></span>
+              <input class="ct-input" type="tel" name="phone" inputmode="tel" autocomplete="tel" required />
+            </label>
+          </fieldset>
+
+          <fieldset class="ct-set">
+            <legend class="ct-legend">Venues</legend>
+
+            <label class="ct-field">
+              <span class="ct-label">
+                Venue name and address, day one <span aria-hidden="true">*</span>
+              </span>
+              <textarea class="ct-input ct-textarea" name="venue_day1" rows="3" required></textarea>
+              <span class="ct-hint">{longDate(day1!.date)}, {day1!.heading}</span>
+            </label>
+
+            <label class="ct-field">
+              <span class="ct-label">
+                Venue and church addresses, day two <span aria-hidden="true">*</span>
+              </span>
+              <textarea class="ct-input ct-textarea" name="venue_day2" rows="4" required></textarea>
+              <span class="ct-hint">{longDate(day2!.date)}, {day2!.heading}</span>
+            </label>
+          </fieldset>
+
+          <fieldset class="ct-set">
+            <legend class="ct-legend">Anything else I should know</legend>
+            <label class="ct-field">
+              <span class="ct-label">
+                Special requests, family groupings, people I must not miss, anything at all.
+              </span>
+              <textarea class="ct-input ct-textarea ct-textarea--tall" name="notes" rows="6"></textarea>
+            </label>
+          </fieldset>
+
+          <fieldset class="ct-set">
+            <legend class="ct-legend">Electronic signature</legend>
+
+            <label class="ct-field">
+              <span class="ct-label">Type your full name <span aria-hidden="true">*</span></span>
+              <input class="ct-input ct-signature" type="text" name="signature_name" autocomplete="name" required />
+            </label>
+
+            <label class="ct-field">
+              <span class="ct-label">Date</span>
+              <input class="ct-input" type="text" value={today} readonly tabindex="-1" aria-readonly="true" />
+            </label>
+
+            <p class="ct-smallprint">
+              By typing your name you are signing this agreement electronically. A copy will
+              be emailed to you.
+            </p>
+          </fieldset>
+
+          <p class="ct-error" data-error role="alert" hidden></p>
+
+          <button type="submit" class="btn btn--fill ct-submit" data-submit>
+            Agree and pay {money(contract.depositPence)}
+          </button>
+
+          <p class="ct-secure">
+            Secure payment by Stripe. Card, Apple Pay, Google Pay, Klarna and Pay by Bank.
+            {' '}{money(balance)} balance due after {shortDate(day2!.date)}.
+          </p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  /* Mobile first. */
+  .ct-hero {
+    background: var(--bg);
+    padding: 44px max(var(--pad), var(--safe-l)) 52px max(var(--pad), var(--safe-r));
+    border-bottom: 1px solid var(--line);
+  }
+  .ct-hero__eyebrow {
+    margin: 0 0 14px;
+  }
+  .ct-hero__title {
+    font-size: clamp(38px, 12vw, 76px);
+    line-height: 0.98;
+    letter-spacing: -2px;
+    margin: 0 0 16px;
+  }
+  .ct-hero__sub {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 20px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--text-60);
+  }
+  .ct-dot {
+    color: var(--orange);
+  }
+
+  .ct-body {
+    padding-top: 36px;
+    padding-bottom: 60px;
+  }
+  .ct-inner {
+    max-width: 660px;
+    margin: 0 auto;
+  }
+
+  .ct-resume {
+    padding: 16px 18px;
+    margin-bottom: 30px;
+    border-radius: 12px;
+    background: rgba(255, 166, 0, 0.12);
+    border-left: 3px solid var(--orange);
+    font-size: 14.5px;
+    line-height: 22px;
+    color: var(--ink);
+  }
+
+  /* Generous line height: this is meant to be read. */
+  .ct-open {
+    margin-bottom: 34px;
+  }
+  .ct-open p {
+    margin: 0 0 16px;
+    font-size: 16px;
+    line-height: 28px;
+    color: var(--ink);
+  }
+  .ct-open__lead {
+    font-weight: 700;
+  }
+
+  .ct-panel {
+    margin: 0 0 40px;
+  }
+
+  .ct-h2 {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.3px;
+    color: var(--ink);
+    margin: 0 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  }
+
+  .ct-days {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .ct-day {
+    padding: 18px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 14px;
+  }
+  .ct-day__no {
+    margin: 0 0 6px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--orange);
+  }
+  .ct-day__date {
+    margin: 0 0 2px;
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .ct-day__heading {
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: var(--ink-60);
+  }
+  .ct-day__list {
+    margin: 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 14.5px;
+    line-height: 23px;
+    color: var(--ink);
+  }
+
+  .ct-price {
+    margin-bottom: 40px;
+  }
+  .ct-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+  .ct-table th {
+    text-align: left;
+    padding: 0 0 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--ink-50);
+    font-weight: 400;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  }
+  .ct-table th:last-child,
+  .ct-table__num {
+    text-align: right;
+  }
+  .ct-table td {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+    font-size: 14.5px;
+    line-height: 21px;
+    color: var(--ink);
+    vertical-align: top;
+  }
+  .ct-table__num {
+    white-space: nowrap;
+    padding-left: 14px !important;
+    font-variant-numeric: tabular-nums;
+  }
+  .ct-table__note {
+    display: block;
+    margin-top: 4px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--ink-50);
+    font-style: italic;
+  }
+  .ct-table__total td {
+    font-weight: 800;
+    border-bottom: 0;
+  }
+
+  .ct-agreed {
+    padding: 20px;
+    border-radius: 14px;
+    background: var(--ink);
+    color: var(--white);
+    margin-bottom: 18px;
+  }
+  .ct-agreed__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .ct-agreed__label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
+  }
+  .ct-agreed__amount {
+    font-size: clamp(30px, 9vw, 42px);
+    letter-spacing: -1.6px;
+    background: var(--grad-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .ct-agreed__row--sub {
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 13.5px;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .ct-because {
+    margin: 0 0 22px;
+    font-size: 14.5px;
+    line-height: 24px;
+    color: var(--ink-60);
+  }
+
+  .ct-pay {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .ct-pay__item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px 16px;
+    border: 1px solid rgba(0, 0, 0, 0.14);
+    border-radius: 12px;
+  }
+  .ct-pay__amount {
+    font-weight: 800;
+    font-size: 17px;
+    color: var(--ink);
+  }
+  .ct-pay__note {
+    font-size: 13.5px;
+    line-height: 20px;
+    color: var(--ink-60);
+  }
+
+  .ct-confidential {
+    margin: 0;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.04);
+    border-left: 3px solid var(--ink);
+    font-size: 13.5px;
+    line-height: 21px;
+    color: var(--ink);
+  }
+
+  .ct-cols {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    margin-bottom: 40px;
+  }
+  .ct-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ct-list li {
+    position: relative;
+    padding-left: 26px;
+    font-size: 14.5px;
+    line-height: 23px;
+    color: var(--ink);
+  }
+  .ct-list li::before {
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+  }
+  .ct-list--yes li::before {
+    content: '✓';
+    color: #0a7a3d;
+  }
+  .ct-list--no li::before {
+    content: '✕';
+    color: var(--red);
+  }
+
+  .ct-terms {
+    margin: 0 0 44px;
+    padding-left: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .ct-terms li {
+    font-size: 14.5px;
+    line-height: 25px;
+    color: var(--ink);
+    padding-left: 4px;
+  }
+  .ct-terms strong {
+    color: var(--ink);
+  }
+
+  /* ---- Form ---- */
+  .ct-form {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+  .ct-set {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+  .ct-set--ack {
+    padding: 18px 16px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.025);
+  }
+  .ct-legend {
+    padding: 0 0 10px;
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--ink-60);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  }
+  .ct-setnote {
+    margin: -6px 0 0;
+    font-size: 13.5px;
+    line-height: 20px;
+    color: var(--ink-60);
+  }
+
+  .ct-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-height: var(--tap);
+    padding: 13px 14px;
+    background: var(--white);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .ct-check:has(input:checked) {
+    border-color: var(--orange);
+    background: rgba(255, 166, 0, 0.07);
+  }
+  .ct-check input {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    margin: 1px 0 0;
+    accent-color: #ff6a00;
+  }
+  .ct-check__text {
+    font-size: 14px;
+    line-height: 22px;
+    color: var(--ink);
+  }
+
+  .ct-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .ct-field[hidden] {
+    display: none;
+  }
+  .ct-label {
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--ink-60);
+  }
+  .ct-label span {
+    color: var(--red);
+  }
+  .ct-hint {
+    margin-top: 7px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--ink-50);
+  }
+  .ct-input {
+    width: 100%;
+    min-width: 0;
+    min-height: 52px;
+    padding: 14px 16px;
+    background: var(--white);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    color: var(--ink);
+    font-family: var(--font-body);
+    /* 16px floor, or iOS zooms on focus. */
+    font-size: 16px;
+    line-height: 22px;
+    outline: none;
+    transition: border-color 0.2s ease;
+  }
+  .ct-input:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(255, 166, 0, 0.18);
+  }
+  .ct-input[readonly] {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--ink-60);
+  }
+  .ct-textarea {
+    min-height: 96px;
+    resize: vertical;
+  }
+  .ct-textarea--tall {
+    min-height: 150px;
+  }
+  .ct-signature {
+    font-size: 19px;
+    letter-spacing: 0.3px;
+  }
+
+  .ct-smallprint {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 19px;
+    color: var(--ink-50);
+  }
+
+  .ct-error {
+    margin: 0;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: rgba(255, 25, 9, 0.08);
+    border-left: 3px solid var(--red);
+    color: #8a0f04;
+    font-size: 14px;
+    line-height: 21px;
+  }
+  .ct-error[hidden] {
+    display: none;
+  }
+
+  /* The only gradient on the page, so nothing competes with it. */
+  .ct-submit {
+    width: 100%;
+    min-height: 60px;
+    border: 0;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+  .ct-submit[disabled] {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .ct-secure {
+    margin: 0;
+    text-align: center;
+    font-size: 12.5px;
+    line-height: 19px;
+    color: var(--ink-50);
+  }
+
+  @media (min-width: 720px) {
+    .ct-hero {
+      padding-top: 76px;
+      padding-bottom: 84px;
+    }
+    .ct-body {
+      padding-top: 56px;
+      padding-bottom: 96px;
+    }
+    .ct-panel {
+      max-width: 460px;
+      margin-inline: auto;
+    }
+    .ct-days {
+      gap: 18px;
+    }
+    .ct-cols {
+      flex-direction: row;
+      gap: 40px;
+    }
+    .ct-cols > div {
+      flex: 1;
+      min-width: 0;
+    }
+    .ct-pay {
+      flex-direction: row;
+    }
+    .ct-pay__item {
+      flex: 1;
+    }
+    .ct-set--ack {
+      padding: 24px;
+    }
+    .ct-submit {
+      min-height: 64px;
+    }
+  }
+</style>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-contract-form]');
+  const errorBox = document.querySelector<HTMLElement>('[data-error]');
+  const submit = document.querySelector<HTMLButtonElement>('[data-submit]');
+  const originalLabel = submit?.textContent ?? 'Agree and pay';
+
+  const showError = (message: string) => {
+    if (!errorBox) return;
+    errorBox.textContent = message;
+    errorBox.hidden = false;
+    errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  form?.addEventListener('submit', async (e) => {
+    if (!form.checkValidity()) {
+      // An unticked acknowledgement is the easiest thing to miss on a long
+      // page, so name it rather than leaving the browser to point vaguely.
+      const missing = form.querySelector<HTMLInputElement>('[data-ack]:not(:checked)');
+      if (missing) {
+        e.preventDefault();
+        showError('Every box in the Acknowledgement section must be ticked before you can continue to payment.');
+        missing.closest('label')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    // Enhance to fetch so a server error does not discard a long form.
+    e.preventDefault();
+    if (errorBox) errorBox.hidden = true;
+    if (submit) {
+      submit.disabled = true;
+      submit.textContent = 'Opening secure payment…';
+    }
+
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { Accept: 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) throw new Error(data.error || 'Could not open the payment page. Please try again.');
+      window.location.href = data.url;
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Could not open the payment page. Please try again.');
+      if (submit) {
+        submit.disabled = false;
+        submit.textContent = originalLabel;
+      }
+    }
+  });
+</script>

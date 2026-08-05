@@ -7,6 +7,9 @@ import { toMin, slotIsFree } from '../../lib/availability';
 import { env } from '../../lib/env';
 import { sendEmail } from '../../lib/email';
 import { sendBookingNotifications } from '../../lib/notify';
+import { getContract, CONTRACT_PACKAGE_SLUG } from '../../config/contracts';
+import { sendContractEmails, type ContractRow } from '../../lib/contract-notify';
+import { generateRef } from '../../lib/availability';
 
 export const prerender = false;
 
@@ -62,8 +65,17 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response('ok (duplicate)', { status: 200 });
   }
 
-  const bookingId = Number(session.metadata?.booking_id);
   const kind = session.metadata?.kind;
+
+  // A signed contract pays a deposit that secures whole days rather than a
+  // single slot, so it takes its own path: create one booking per contracted
+  // day (which is what blocks the calendar), then send the four emails.
+  if (kind === 'contract') {
+    await handleContractPayment(session);
+    return new Response('ok', { status: 200 });
+  }
+
+  const bookingId = Number(session.metadata?.booking_id);
   const amountTotal = session.amount_total ?? 0;
   const paymentIntent =
     typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
@@ -212,5 +224,109 @@ async function safeSend(...args: Parameters<typeof sendEmail>): Promise<void> {
     await sendEmail(...args);
   } catch (err) {
     console.error('[email] send threw, not retrying:', err);
+  }
+}
+
+/**
+ * A signed contract has been paid.
+ *
+ * Creates one confirmed booking per contracted day, which is what makes both
+ * dates unavailable to everyone else, then sends the four emails. Written to
+ * be safe on a Stripe retry: the bookings are only created if the contract is
+ * not already marked paid.
+ */
+async function handleContractPayment(session: Stripe.Checkout.Session): Promise<void> {
+  const contractId = Number(session.metadata?.contract_id);
+  if (!contractId) {
+    console.error('[contract] session has no contract_id', session.id);
+    return;
+  }
+
+  const paymentIntent =
+    typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
+
+  const found = await query<ContractRow>(`SELECT * FROM contracts WHERE id = $1`, [contractId]);
+  const row = found.rows[0];
+  if (!row) {
+    console.error('[contract] payment for unknown contract', contractId);
+    return;
+  }
+  if (row.status === 'paid') {
+    console.log(`[contract] ${row.ref} already marked paid, skipping`);
+    return;
+  }
+
+  const contract = getContract(row.slug);
+  if (!contract) {
+    console.error(`[contract] unknown slug ${row.slug} on contract ${row.ref}`);
+    return;
+  }
+
+  // One booking per day, each holding the whole day. Deliberately not checking
+  // slotIsFree: these dates were promised in a signed agreement, so a clash is
+  // something to flag to the studio, not a reason to refuse the wedding.
+  const bookingIds: number[] = [];
+  try {
+    for (const [i, day] of contract.days.entries()) {
+      const dayRef = `${row.ref}-D${i + 1}`;
+      const { rows } = await query<{ id: number }>(
+        `INSERT INTO bookings
+           (ref, package_slug, tier_label, total_pence, paid_pence, balance_pence,
+            name, email, phone, location_type, address, notes,
+            date, start_time, end_time, status, stripe_session_id, stripe_payment_intent)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'on_location',$10,$11,$12,$13,$14,'deposit_paid',$15,$16)
+         ON CONFLICT (ref) DO NOTHING
+         RETURNING id`,
+        [
+          dayRef,
+          CONTRACT_PACKAGE_SLUG,
+          `${contract.title}, day ${i + 1} of ${contract.days.length}, ${day.heading}`,
+          // The agreed total and the deposit sit on day one so the books add
+          // up once; day two is the same booking, not a second sale.
+          i === 0 ? row.total_pence : 0,
+          i === 0 ? row.deposit_pence : 0,
+          i === 0 ? row.balance_pence : 0,
+          `${row.signer_name} & ${row.partner_name}`,
+          row.email,
+          row.phone,
+          i === 0 ? row.venue_day1 : row.venue_day2,
+          [`Contract ${row.ref}.`, row.notes ? `Client notes: ${row.notes}` : '']
+            .filter(Boolean)
+            .join(' '),
+          day.date,
+          day.blockFrom,
+          day.blockTo,
+          // Only day one carries the session id: bookings_stripe_session_idx is
+          // a unique index that deliberately stops one checkout producing two
+          // bookings. Idempotency here comes from the deterministic -D1/-D2
+          // refs and ON CONFLICT DO NOTHING instead.
+          i === 0 ? session.id : null,
+          paymentIntent ?? null,
+        ]
+      );
+      if (rows[0]) bookingIds.push(rows[0].id);
+    }
+  } catch (err) {
+    // The payment is real even if the calendar write failed; record the
+    // payment and shout, rather than letting Stripe retry the whole event.
+    console.error(`[contract] CALENDAR WRITE FAILED for ${row.ref}, block 17/18 Aug manually:`, err);
+  }
+
+  const updated = await query<ContractRow>(
+    `UPDATE contracts
+        SET status = 'paid', paid_at = now(),
+            stripe_payment_intent = COALESCE($2, stripe_payment_intent),
+            booking_ids = $3
+      WHERE id = $1
+      RETURNING *`,
+    [contractId, paymentIntent ?? null, bookingIds.length ? bookingIds : null]
+  );
+
+  const fresh = updated.rows[0] ?? row;
+  try {
+    const { sent, total } = await sendContractEmails(fresh);
+    console.log(`[contract] ${row.ref}: ${sent}/${total} emails sent, bookings ${bookingIds.join(', ') || 'none'}`);
+  } catch (err) {
+    console.error(`[contract] emails threw for ${row.ref}, not retrying:`, err);
   }
 }
