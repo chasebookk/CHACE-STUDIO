@@ -197,3 +197,30 @@ CREATE TABLE IF NOT EXISTS contracts (
 CREATE INDEX IF NOT EXISTS contracts_slug_idx ON contracts (slug);
 CREATE UNIQUE INDEX IF NOT EXISTS contracts_stripe_session_idx
   ON contracts (stripe_session_id) WHERE stripe_session_id IS NOT NULL;
+
+-- ---- Settled invoices ----
+-- Payment for work already delivered. Deliberately unrelated to bookings and
+-- contracts: an invoice never touches the calendar, never holds a slot and
+-- never runs availability, because the session it bills for has already
+-- happened. One row per invoice, marked paid by the Stripe webhook.
+CREATE TABLE IF NOT EXISTS invoices (
+  id SERIAL PRIMARY KEY,
+  slug TEXT NOT NULL,
+  ref TEXT UNIQUE NOT NULL,
+  client_name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  session_date DATE,
+  amount_pence INT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'unpaid',
+  payer_email TEXT,
+  payer_name TEXT,
+  stripe_session_id TEXT,
+  stripe_payment_intent TEXT,
+  paid_at TIMESTAMPTZ,
+  ip TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS invoices_slug_idx ON invoices (slug);
+CREATE UNIQUE INDEX IF NOT EXISTS invoices_stripe_session_idx
+  ON invoices (stripe_session_id) WHERE stripe_session_id IS NOT NULL;

@@ -1,0 +1,283 @@
+---
+// Payment page for a session that has already been shot. No calendar, no
+// availability, no hold: this settles an invoice, it does not book anything.
+export const prerender = false;
+
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { query } from '../../lib/db';
+import { getInvoice, money, longDate, whenPaid } from '../../config/invoices';
+
+const invoice = getInvoice('prewedding-divine-bolu')!;
+
+// If it has already been settled, say so rather than offering to charge again.
+const { rows } = await query<{ ref: string; paid_at: string }>(
+  `SELECT ref, paid_at FROM invoices WHERE slug = $1 AND status = 'paid' LIMIT 1`,
+  [invoice.slug]
+);
+const settled = rows[0];
+---
+
+<Base
+  title={`${invoice.title}, ${invoice.clientName} | CHACE STUDIOS`}
+  description="Payment for your pre-wedding session."
+  ogImage={invoice.ogImage}
+  robots="noindex, nofollow"
+>
+  <Header />
+
+  <main class="pv">
+    <section class="pv-hero">
+      <p class="eyebrow pv-hero__eyebrow">Payment</p>
+      <h1 class="display pv-hero__title">{invoice.title}</h1>
+      <p class="pv-hero__sub">{invoice.clientName}</p>
+    </section>
+
+    <section class="pv-body sec-light">
+      <div class="pv-inner">
+        {settled ? (
+          <div class="pv-settled">
+            <p class="pv-settled__head">This session is paid in full.</p>
+            <p class="pv-settled__note">
+              Settled on {whenPaid(settled.paid_at)}, reference
+              {' '}<strong>{settled.ref}</strong>. There is nothing further to pay. If you need
+              another copy of your receipt, email
+              {' '}<a href="mailto:bookings@chace.studio">bookings@chace.studio</a>.
+            </p>
+          </div>
+        ) : (
+          <>
+            <dl class="pv-summary">
+              <div class="pv-row">
+                <dt>Session</dt>
+                <dd>{invoice.sessionLabel}</dd>
+              </div>
+              <div class="pv-row">
+                <dt>Shot on</dt>
+                <dd>{longDate(invoice.sessionDate)}</dd>
+              </div>
+              <div class="pv-row">
+                <dt>Client</dt>
+                <dd>{invoice.clientName}</dd>
+              </div>
+              <div class="pv-row pv-row--total">
+                <dt>Amount due</dt>
+                <dd class="display pv-amount">{money(invoice.amountPence)}</dd>
+              </div>
+            </dl>
+
+            <p class="pv-rate">{invoice.rateNote}</p>
+
+            <form method="post" action="/api/pay-invoice" data-pay-form>
+              <input type="hidden" name="slug" value={invoice.slug} />
+              <p class="pv-error" data-error role="alert" hidden></p>
+              <button type="submit" class="btn btn--fill pv-submit" data-submit>
+                Pay {money(invoice.amountPence)}
+              </button>
+            </form>
+
+            <p class="pv-secure">
+              Secure payment by Stripe. Card, Apple Pay, Google Pay, Klarna and Pay by Bank.
+              Your receipt is emailed to you as soon as the payment clears.
+            </p>
+          </>
+        )}
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  /* Mobile first, and short by design. */
+  .pv-hero {
+    background: var(--bg);
+    padding: 44px max(var(--pad), var(--safe-l)) 48px max(var(--pad), var(--safe-r));
+    border-bottom: 1px solid var(--line);
+  }
+  .pv-hero__eyebrow {
+    margin: 0 0 14px;
+  }
+  .pv-hero__title {
+    font-size: clamp(34px, 10vw, 58px);
+    line-height: 1;
+    letter-spacing: -1.8px;
+    margin: 0 0 14px;
+  }
+  .pv-hero__sub {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--text-60);
+  }
+
+  .pv-body {
+    padding-top: 36px;
+    padding-bottom: 56px;
+  }
+  .pv-inner {
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .pv-summary {
+    margin: 0 0 20px;
+    padding: 0;
+  }
+  .pv-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.09);
+  }
+  .pv-row dt {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--ink-50);
+  }
+  .pv-row dd {
+    margin: 0;
+    font-size: 15px;
+    line-height: 23px;
+    color: var(--ink);
+    text-align: right;
+  }
+  .pv-row--total {
+    border-bottom: 0;
+    padding-top: 18px;
+  }
+  .pv-amount {
+    font-size: clamp(32px, 10vw, 44px);
+    letter-spacing: -1.6px;
+    background: var(--grad-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .pv-rate {
+    margin: 0 0 26px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.04);
+    border-left: 3px solid var(--ink);
+    font-size: 13.5px;
+    line-height: 21px;
+    color: var(--ink);
+  }
+
+  .pv-error {
+    margin: 0 0 14px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: rgba(255, 25, 9, 0.08);
+    border-left: 3px solid var(--red);
+    color: #8a0f04;
+    font-size: 14px;
+    line-height: 21px;
+  }
+  .pv-error[hidden] {
+    display: none;
+  }
+
+  .pv-submit {
+    width: 100%;
+    min-height: 60px;
+    border: 0;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+  .pv-submit[disabled] {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .pv-secure {
+    margin: 16px 0 0;
+    text-align: center;
+    font-size: 12.5px;
+    line-height: 19px;
+    color: var(--ink-50);
+  }
+
+  .pv-settled {
+    padding: 22px;
+    border-radius: 14px;
+    background: rgba(255, 166, 0, 0.1);
+    border-left: 3px solid var(--orange);
+  }
+  .pv-settled__head {
+    margin: 0 0 8px;
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--ink);
+  }
+  .pv-settled__note {
+    margin: 0;
+    font-size: 14.5px;
+    line-height: 23px;
+    color: var(--ink);
+  }
+  .pv-settled__note a {
+    color: var(--ink);
+    text-decoration: underline;
+  }
+
+  @media (min-width: 720px) {
+    .pv-hero {
+      padding-top: 72px;
+      padding-bottom: 76px;
+    }
+    .pv-body {
+      padding-top: 52px;
+      padding-bottom: 84px;
+    }
+    .pv-submit {
+      min-height: 64px;
+    }
+  }
+</style>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-pay-form]');
+  const errorBox = document.querySelector<HTMLElement>('[data-error]');
+  const submit = document.querySelector<HTMLButtonElement>('[data-submit]');
+  const label = submit?.textContent ?? 'Pay';
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (errorBox) errorBox.hidden = true;
+    if (submit) {
+      submit.disabled = true;
+      submit.textContent = 'Opening secure payment…';
+    }
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { Accept: 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) throw new Error(data.error || 'Could not open the payment page.');
+      window.location.href = data.url;
+    } catch (err) {
+      if (errorBox) {
+        errorBox.textContent = err instanceof Error ? err.message : 'Could not open the payment page.';
+        errorBox.hidden = false;
+      }
+      if (submit) {
+        submit.disabled = false;
+        submit.textContent = label;
+      }
+    }
+  });
+</script>

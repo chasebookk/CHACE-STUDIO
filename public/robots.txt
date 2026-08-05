@@ -8,6 +8,7 @@ Disallow: /quote/
 Disallow: /book/
 Disallow: /booking/
 Disallow: /contract/
+Disallow: /pay/
 Disallow: /training/
 Disallow: /board/
 

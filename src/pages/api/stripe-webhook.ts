@@ -9,6 +9,7 @@ import { sendEmail } from '../../lib/email';
 import { sendBookingNotifications } from '../../lib/notify';
 import { getContract, CONTRACT_PACKAGE_SLUG } from '../../config/contracts';
 import { sendContractEmails, type ContractRow } from '../../lib/contract-notify';
+import { sendInvoiceReceipts, type InvoiceRow } from '../../lib/invoice-notify';
 import { generateRef } from '../../lib/availability';
 
 export const prerender = false;
@@ -72,6 +73,14 @@ export const POST: APIRoute = async ({ request }) => {
   // day (which is what blocks the calendar), then send the four emails.
   if (kind === 'contract') {
     await handleContractPayment(session);
+    return new Response('ok', { status: 200 });
+  }
+
+  // A settled invoice bills for a session that has already been shot. It marks
+  // one row paid and sends two receipts. It must never create a booking or
+  // touch a date.
+  if (kind === 'invoice') {
+    await handleInvoicePayment(session);
     return new Response('ok', { status: 200 });
   }
 
@@ -346,5 +355,49 @@ async function handleContractPayment(session: Stripe.Checkout.Session): Promise<
     console.log(`[contract] ${row.ref}: ${sent}/${total} emails sent, bookings ${bookingIds.join(', ') || 'none'}`);
   } catch (err) {
     console.error(`[contract] emails threw for ${row.ref}, not retrying:`, err);
+  }
+}
+
+/**
+ * A settled invoice has been paid.
+ *
+ * Deliberately has no calendar side effects: no booking, no hold, no
+ * availability check. The receipt goes to the email Stripe collected and
+ * verified at checkout.
+ */
+async function handleInvoicePayment(session: Stripe.Checkout.Session): Promise<void> {
+  const invoiceId = Number(session.metadata?.invoice_id);
+  if (!invoiceId) {
+    console.error('[invoice] session has no invoice_id', session.id);
+    return;
+  }
+
+  const paymentIntent =
+    typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
+  const payerEmail = session.customer_details?.email ?? session.customer_email ?? null;
+  const payerName = session.customer_details?.name ?? null;
+
+  const { rows } = await query<InvoiceRow>(
+    `UPDATE invoices
+        SET status = 'paid',
+            paid_at = COALESCE(paid_at, now()),
+            payer_email = COALESCE($2, payer_email),
+            payer_name = COALESCE($3, payer_name),
+            stripe_payment_intent = COALESCE($4, stripe_payment_intent)
+      WHERE id = $1 AND status <> 'paid'
+      RETURNING *`,
+    [invoiceId, payerEmail, payerName, paymentIntent ?? null]
+  );
+
+  if (!rows[0]) {
+    console.log(`[invoice] ${invoiceId} already paid or missing, skipping receipts`);
+    return;
+  }
+
+  try {
+    const { sent, total } = await sendInvoiceReceipts(rows[0]);
+    console.log(`[invoice] ${rows[0].ref}: paid ${rows[0].amount_pence}, ${sent}/${total} receipts sent`);
+  } catch (err) {
+    console.error(`[invoice] receipts threw for ${rows[0].ref}, not retrying:`, err);
   }
 }
